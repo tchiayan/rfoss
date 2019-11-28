@@ -3,7 +3,9 @@ import './App.css';
 //import { ipcRenderer } from  'electron';
 import { Button , Dropdown , Card  , Form, Table , Col , Modal , Spinner } from "react-bootstrap";
 //import { ReactComponent as Cancel } from './Cancel.svg'
-import Snackbar from '@material-ui/core/Snackbar';
+import { Snackbar , IconButton } from '@material-ui/core';
+import CloseIcon from '@material-ui/icons/Close';
+
 import KpiGraph from './KpiGraph';
 
 
@@ -94,6 +96,8 @@ class App extends React.Component{
       mrmainseries: 0,
       mrmainlist: [],
       kpiGraphDialog: false,
+      updateAvailable: false, 
+      updateDownloaded: false, 
       snack:{
         open: false, 
         message: ''
@@ -106,6 +110,26 @@ class App extends React.Component{
     this.handleKpiGraphClose = this.handleKpiGraphClose.bind(this)
     this.addBhMainChartHandler = this.addBhMainChartHandler.bind(this)
     this.handleSnackClose = this.handleSnackClose.bind(this)
+    this.handleSnackUpdateClose = this.handleSnackUpdateClose.bind(this)
+    this.handleSnackUpdateDownloadedClose = this.handleSnackUpdateDownloadedClose.bind(this)
+  }
+
+  downloadUpdate(){
+    let db = new Database()
+    this.setState({updateAvailable:false})
+    db.send("download_update")
+  }
+  installUpdate(){
+    let db = new Database()
+    db.send("quit_install")
+  }
+
+  handleSnackUpdateClose(){
+    this.setState({updateAvailable:false})
+  }
+
+  handleSnackUpdateDownloadedClose(){
+    this.setState({updateDownloaded:false})
   }
 
   handleSnackClose(){
@@ -114,6 +138,7 @@ class App extends React.Component{
     snack.message = ""
     this.setState({snack:snack})
   }
+  
   handleKpiGraphClose(){
     this.setState({kpiGraphDialog:false})
   }
@@ -188,7 +213,8 @@ class App extends React.Component{
     if(!!baselineTitle) updateField['baselinetitle'] = `'${baselineTitle}'`
     if(!!baselineValue) updateField['baselinevalue'] = baselineValue
 
-    let update = (new Database()).update(`INSERT INTO mrmainchart (${Object.keys(updateField).join(",")}) VALUES ( ${Object.values(updateField).join(",")}) `).then((response)=>{
+    let db = new Database()
+    db.update(`INSERT INTO mrmainchart (${Object.keys(updateField).join(",")}) VALUES ( ${Object.values(updateField).join(",")}) `).then((response)=>{
       if(response.status === "Ok"){
         this.updateBhMainChartList()
       }
@@ -217,6 +243,16 @@ class App extends React.Component{
   componentDidMount(){
     this.projectSelectHandler(0)
     this.initDb()
+
+    // check for update
+    let db = new Database()
+    db.listenAvailableUpdate().then(()=>{
+      this.setState({updateAvailable:true})
+    })
+
+    db.listenUpdateDownloaded().then(()=>{
+      this.setState({updateDownloaded:true})
+    })
   }
 
   removeAllRawData(){
@@ -388,7 +424,9 @@ class App extends React.Component{
       mrlayerlist,
       mrmainseries,
       mrmainlist,
-      snack
+      snack,
+      updateAvailable,
+      updateDownloaded,
     } = this.state
 
     const disabled = removingDuplicated || uploading || removingAll
@@ -546,7 +584,7 @@ class App extends React.Component{
                 <Form.Row>
                   <Form.Group as={Col} controlId="form-graph-bh-layer-title">
                     <Form.Label>Graph Title</Form.Label>
-                    <Form.Control required type="text" required placeholder="Enter graph title"></Form.Control>
+                    <Form.Control required type="text" placeholder="Enter graph title"></Form.Control>
                   </Form.Group>
                   <Form.Group as={Col}>
                     <Form.Label>Graph Series</Form.Label>
@@ -594,7 +632,7 @@ class App extends React.Component{
 
                   <Form.Group as={Col} controlId="form-graph-bh-main-title">
                     <Form.Label>Graph Title</Form.Label>
-                    <Form.Control required type="text" required placeholder="Enter graph title"></Form.Control>
+                    <Form.Control required type="text" placeholder="Enter graph title"></Form.Control>
                   </Form.Group>
                   <Form.Group as={Col} controlId="form-graph-bh-main-series">
                     <Form.Label>Graph Series</Form.Label>
@@ -668,8 +706,53 @@ class App extends React.Component{
           open={snack.open}
           autoHideDuration={6000}
           onClose={this.handleSnackClose}
-          autoHideDuration={6000}
           message={<span id="message-id">{snack.message}</span>}
+        />
+
+        <Snackbar 
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'right'
+          }}
+          open={updateAvailable}
+          onClose={this.handleSnackUpdateClose}
+          message={<span id="message-id">Update available</span>}
+          action={[
+            <Button variant="secondary" size="small" onClick={()=>{this.downloadUpdate()}}>
+              Download
+            </Button>,
+            <IconButton
+              key="close"
+              aria-label="close"
+              color="inherit"
+              onClick={this.handleSnackUpdateClose}
+            >
+              <CloseIcon />
+            </IconButton>,
+          ]}
+        />
+
+        <Snackbar 
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'right'
+          }}
+          open={updateDownloaded}
+          onClose={this.handleSnackUpdateDownloadedClose}
+          message={<span id="message-id">Update downloaded, restart to install.</span>}
+          action={[
+            <Button variant="secondary" size="small" onClick={()=>{this.installUpdate()}}>
+              Restart
+            </Button>,
+            <IconButton
+              key="close"
+              aria-label="close"
+              color="inherit"
+              onClick={this.handleSnackUpdateDownloadedClose}
+            >
+              <CloseIcon />
+            </IconButton>,
+          ]}
         />
       </div>
     );

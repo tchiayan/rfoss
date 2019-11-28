@@ -2,6 +2,7 @@ const isDev = require('electron-is-dev')
 const path = require('path')
 const { ipcMain , dialog , app , Menu , BrowserWindow , electron } = require('electron')
 const sqlite3 = require('sqlite3').verbose();
+const { autoUpdater } = require("electron-updater");
 
 let mainWindow
 let spawnProcess = []
@@ -51,7 +52,15 @@ function createWindow() {
     mainWindow.setMenu(null)
 
     //mainWindow.webContents.openDevTools({mode:'right'})
-    
+    autoUpdater.autoDownload = false
+    autoUpdater.checkForUpdatesAndNotify();
+
+    //Testing for update
+    //setTimeout(()=>{
+    //    console.log("update_available")
+    //    mainWindow.webContents.send("update-available") 
+    //},4000)
+
 }
 
 app.on('ready', createWindow)
@@ -249,4 +258,21 @@ ipcMain.on("linkDatabase", (event)=>{
             event.sender.send("linkDatabase", {status:'Ok',result:'close'})
         }
     })
+})
+
+// Auto Update
+autoUpdater.on("update-available", ()=>{
+    mainWindow.webContents.send("update_available")
+})
+
+autoUpdater.on("update-downloaded", ()=>{
+    mainWindow.webContents.send("update_downloaded")
+})
+
+ipcMain.on("download_update",(event)=>{
+    autoUpdater.downloadUpdate()
+})
+
+ipcMain.on("quit_install", ()=>{
+    autoUpdater.quitAndInstall()
 })

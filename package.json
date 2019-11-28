@@ -1,5 +1,5 @@
 {
-  "name": "steadcom-unify",
+  "name": "steadcom-tools",
   "version": "0.1.0",
   "private": true,
   "main": "public/electron.js",
@@ -15,6 +15,7 @@
     "@ag-grid-community/all-modules": "^22.0.0",
     "@ag-grid-community/react": "^22.0.0",
     "@material-ui/core": "^4.7.0",
+    "@material-ui/icons": "^4.5.1",
     "bootstrap": "^4.3.1",
     "electron-is-dev": "^1.1.0",
     "electron-updater": "^4.2.0",
@@ -40,7 +41,7 @@
     "build-python": "pyinstaller python\\upload.py --onefile --distpath=public",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
-    "release":"electron-builder --publish=always"
+    "release": "electron-builder --publish=always"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -72,8 +73,15 @@
       "from": "build/upload.exe",
       "to": "app.asar.unpacked/upload.exe"
     },
-    "win":{
-      "publish":["github"]
+    "win": {
+      "publish": [
+        "github"
+      ]
+    },
+    "nsis":{
+      "oneClick":false,
+      "perMachine":false,
+      "allowToChangeInstallationDirectory":true
     }
   }
 }
