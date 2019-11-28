@@ -14,16 +14,17 @@ console.log("App version", app.getVersion())
 /* Load configuration */
 const fs = require("fs")
 const configFilePath = "./config.js"
-let defaultDbPath = "./core.db"
-let configuration ;
+let defaultDbPath = path.join(process.cwd(),"core.db")
+let configuration; 
+
 if(fs.existsSync(configFilePath)){
     configuration = JSON.parse(fs.readFileSync(configFilePath, {encoding:"utf-8"}))
     defaultDbPath = configuration.dbPath
 }else{
     // Create config file
-    configuration = {dbPath:"./core.db"}
+    configuration = {dbPath:defaultDbPath}
     fs.writeFileSync(configFilePath, JSON.stringify(configuration), {encoding:'utf-8'})
-    defaultDbPath = "./core.db"
+    // defaultDbPath = "./core.db"
 }
 
 /* Electron */
@@ -258,6 +259,12 @@ ipcMain.on("linkDatabase", (event)=>{
             event.sender.send("linkDatabase", {status:'Ok',result:'close'})
         }
     })
+})
+
+ipcMain.on("whereismydb", ()=>{
+    const { spawn } = require("child_process")
+    const dbFolder = path.dirname(defaultDbPath)
+    spawn("explorer", [dbFolder])
 })
 
 // Auto Update

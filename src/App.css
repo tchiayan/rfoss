@@ -15,8 +15,9 @@ div.card-section:not(:first-child){
 .database-control-wrap{
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
 }
 
 .database-control{
-    margin: 0px 10px 
+    margin: 5px 10px 
 }

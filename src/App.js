@@ -114,6 +114,11 @@ class App extends React.Component{
     this.handleSnackUpdateDownloadedClose = this.handleSnackUpdateDownloadedClose.bind(this)
   }
 
+  whereismydb(){
+    let db = new Database()
+    db.send("whereismydb")
+  }
+
   downloadUpdate(){
     let db = new Database()
     this.setState({updateAvailable:false})
@@ -499,6 +504,11 @@ class App extends React.Component{
                 </Delete>
               </div>
               
+              <div className="database-control">
+                <Button onClick={()=>{this.whereismydb()}}>
+                  Where is my database?
+                </Button>
+              </div>
             </div>
             
             
@@ -627,7 +637,7 @@ class App extends React.Component{
             </div>
             <div style={{marginTop:"30px",borderTop:"1px solid #cecece", paddingTop:"10px"}}>
               <h4>BH Main KPI Graph</h4>
-              <Form onSubmit={this.addBhMainChartHandler}>
+              <Form onSubmit={this.addBhMainChartHandler} style={{marginBottom:"10px"}}>
                 <Form.Row>
 
                   <Form.Group as={Col} controlId="form-graph-bh-main-title">
@@ -692,7 +702,7 @@ class App extends React.Component{
         </Card>
         
         <Modal centered onHide={this.handleKpiGraphClose} show={this.state.kpiGraphDialog} dialogClassName="mrchartdialog">
-          <Modal.Header>Kpi Graph</Modal.Header>
+          <Modal.Header>KPI Graph</Modal.Header>
           <Modal.Body>
             <KpiGraph mrlayerlist={mrlayerlist} project={selectedProject} mrmainlist={mrmainlist} />
           </Modal.Body>
