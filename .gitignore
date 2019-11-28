@@ -23,6 +23,7 @@
 *.db
 config.js
 *.spec
+/public/*.exe
 
 npm-debug.log*
 yarn-debug.log*
