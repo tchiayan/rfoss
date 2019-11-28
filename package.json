@@ -2,16 +2,45 @@
   "name": "steadcom-unify",
   "version": "0.1.0",
   "private": true,
+  "main": "public/electron.js",
+  "author": {
+    "name": "Tan Chia Yan",
+    "email": "chiayan@steadcom.my"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tchiayan/steadcom-tools.git"
+  },
   "dependencies": {
+    "@ag-grid-community/all-modules": "^22.0.0",
+    "@ag-grid-community/react": "^22.0.0",
+    "@material-ui/core": "^4.7.0",
+    "bootstrap": "^4.3.1",
+    "electron-is-dev": "^1.1.0",
+    "electron-updater": "^4.2.0",
+    "highcharts": "^7.2.1",
+    "moment": "^2.24.0",
+    "nan": "^2.14.0",
     "react": "^16.12.0",
+    "react-bootstrap": "^1.0.0-beta.16",
     "react-dom": "^16.12.0",
-    "react-scripts": "3.2.0"
+    "react-router-dom": "^5.1.2",
+    "react-scripts": "3.2.0",
+    "sqlite3": "^4.1.0",
+    "xlstream": "^1.0.11",
+    "xlsx": "^0.15.2"
   },
   "scripts": {
+    "electron": "electron .",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "postinstall": "electron-builder install-app-deps",
+    "build-python": "pyinstaller python\\upload.py --onefile --distpath=public",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "release":"electron-builder --publish=always"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -27,5 +56,24 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "electron": "^7.1.2",
+    "electron-builder": "^21.2.0"
+  },
+  "homepage": ".",
+  "build": {
+    "appId": "com.electron.stdmaxistool",
+    "asar": true,
+    "files": [
+      "!build/upload.exe"
+    ],
+    "extraResources": {
+      "from": "build/upload.exe",
+      "to": "app.asar.unpacked/upload.exe"
+    },
+    "win":{
+      "publish":["github"]
+    }
   }
 }
