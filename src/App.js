@@ -164,7 +164,7 @@ class App extends React.Component{
 
     let formula = kpiFormula
     formula = formula.replace(/(avg|sum)/gi, "")
-    formula = formula.replace(/(\w+_)/gi, "C.$1")
+    formula = formula.replace(/(\w+)/gi, "C.$1")
 
     try{
       eval(formula)
@@ -179,6 +179,10 @@ class App extends React.Component{
       })
     }catch(error){
       console.log("Formula is wrong")
+      let snack = this.state.snack
+      snack.open = true 
+      snack.message = "Incorrect formula"
+      this.setState({snack:snack})
     }
   }
 
@@ -191,7 +195,7 @@ class App extends React.Component{
     const seriesInfo = this.state.kpiList[this.state.mrlayerseries]
 
     let db = new Database()
-    db.update(`INSERT INTO mrlayerchart ( title , seriesid , seriesname , seriesformula ) VALUES ( '${layerTitle}' , ${seriesInfo.ID} , '${seriesInfo.name}' , '${seriesInfo.formula}')`).then((response)=>{
+    db.update(`INSERT INTO mrlayerchart ( title , seriesid , seriesname , seriesformula , table_stats ) VALUES ( '${layerTitle}' , ${seriesInfo.ID} , '${seriesInfo.name}' , '${seriesInfo.formula}', '${this.config[0].tablename}')`).then((response)=>{
       if(response.status === 'Ok'){
         this.updateBhLayerChartList()
       }
@@ -212,7 +216,8 @@ class App extends React.Component{
       title: `'${title}'` , 
       seriesid : seriesInfo.ID , 
       seriesname: `'${seriesInfo.name}'`,
-      seriesformula : `'${seriesInfo.formula}'`
+      seriesformula : `'${seriesInfo.formula}'`,
+      table_stats: `'${this.config[0].tablename}'`
     }
 
     if(!!baselineTitle) updateField['baselinetitle'] = `'${baselineTitle}'`
@@ -233,12 +238,11 @@ class App extends React.Component{
       this.updateTableColumnAndCountername(this.config[0].tablename)
     })
     
-    db.createTableIfNotAssist('mrlayerchart', 'CREATE TABLE mrlayerchart (ID INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL , title TEXT, seriesid INTEGER NOT NULL, seriesname TEXT NOT NULL, seriesformula TEXT NOT NULL)').then(()=>{
-      return db.createTableIfNotAssist('mrmainchart', 'CREATE TABLE mrmainchart (ID INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL , title TEXT, seriesid INTEGER NOT NULL, seriesname TEXT NOT NULL, seriesformula TEXT NOT NULL, baselinetitle TEXT, baselinevalue REAL)')
+    db.createTableIfNotAssist('mrlayerchart', 'CREATE TABLE mrlayerchart (ID INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL , title TEXT, seriesid INTEGER NOT NULL, seriesname TEXT NOT NULL, seriesformula TEXT NOT NULL, table_stats TEXT NOT NULL)').then(()=>{
+      return db.createTableIfNotAssist('mrmainchart', 'CREATE TABLE mrmainchart (ID INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL , title TEXT, seriesid INTEGER NOT NULL, seriesname TEXT NOT NULL, seriesformula TEXT NOT NULL, baselinetitle TEXT, baselinevalue REAL, table_stats TEXT NOT NULL)')
     }).then(()=>{
       return db.createTableIfNotAssist('formulas',"CREATE TABLE formulas (ID INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL, name TEXT NOT NULL, formula TEXT NOT NULL, table_stats TEXT NOT NULL )")
     }).then(()=>{
-      
       this.updateKpiList(this.config[0].tablename)
       this.updateBhLayerChartList()
       this.updateBhMainChartList()
@@ -338,7 +342,7 @@ class App extends React.Component{
 
   updateBhLayerChartList(tablename){
     let db = new Database()
-    db.query(`SELECT ID, title , seriesname, seriesformula FROM mrlayerchart`).then((response)=>{
+    db.query(`SELECT ID, title , seriesname, seriesformula FROM mrlayerchart WHERE table_stats = '${this.config[0].tablename}'`).then((response)=>{
       if(response.status === 'Ok'){
         console.log(response.result)
         this.setState({mrlayerlist: response.result})
@@ -350,7 +354,7 @@ class App extends React.Component{
 
   updateBhMainChartList(){
     let db = new Database()
-    db.query(`SELECT ID, title , seriesname, seriesformula, baselinetitle, baselinevalue FROM mrmainchart`).then((response)=>{
+    db.query(`SELECT ID, title , seriesname, seriesformula, baselinetitle, baselinevalue FROM mrmainchart WHERE table_stats = '${this.config[0].tablename}'`).then((response)=>{
       if(response.status === 'Ok'){
         console.log(response.result)
         this.setState({mrmainlist: response.result})
