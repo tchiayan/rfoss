@@ -7,7 +7,7 @@ import { Snackbar , IconButton } from '@material-ui/core';
 import CloseIcon from '@material-ui/icons/Close';
 
 import KpiGraph from './KpiGraph';
-
+import TaTable from './TaTable';
 
 // Ag-grid Import
 import { AgGridReact } from '@ag-grid-community/react';
@@ -95,6 +95,9 @@ class App extends React.Component{
       mrlayerlist: [],
       mrmainseries: 0,
       mrmainlist: [],
+      tatablelist: [],
+      tatableseries: 0,
+      taTableDialog: false,
       kpiGraphDialog: false,
       updateAvailable: false, 
       updateDownloaded: false, 
@@ -109,9 +112,19 @@ class App extends React.Component{
     this.addBhLayerChartHandler = this.addBhLayerChartHandler.bind(this)
     this.handleKpiGraphClose = this.handleKpiGraphClose.bind(this)
     this.addBhMainChartHandler = this.addBhMainChartHandler.bind(this)
+    this.addTaTableHandler = this.addTaTableHandler.bind(this)
+    this.handleTaTableCLose = this.handleTaTableCLose.bind(this)
     this.handleSnackClose = this.handleSnackClose.bind(this)
+    this.handleSnackMessage = this.handleSnackMessage.bind(this)
     this.handleSnackUpdateClose = this.handleSnackUpdateClose.bind(this)
     this.handleSnackUpdateDownloadedClose = this.handleSnackUpdateDownloadedClose.bind(this)
+  }
+
+  handleSnackMessage(message){
+    let snack = this.state.snack
+    snack.open = true;
+    snack.message = message;
+    this.setState({snack:snack})
   }
 
   whereismydb(){
@@ -146,6 +159,10 @@ class App extends React.Component{
   
   handleKpiGraphClose(){
     this.setState({kpiGraphDialog:false})
+  }
+
+  handleTaTableCLose(){
+    this.setState({taTableDialog:false})
   }
 
   handleKpiSubmit(event){
@@ -202,6 +219,24 @@ class App extends React.Component{
     })
   }
 
+  addTaTableHandler(event){
+    event.preventDefault();
+    event.stopPropagation();
+
+    const form = event.currentTarget;
+    const title = form.querySelector("#form-table-ta-title").value 
+    const seriesInfo = this.state.kpiList[this.state.tatableseries]
+
+    console.log(title)
+    console.log(seriesInfo)
+    let db = new Database()
+    db.update(`INSERT INTO tatable (title , seriesid , seriesname, seriesformula, table_stats ) VALUES ( '${title}' , ${seriesInfo.ID} , '${seriesInfo.name}' , '${seriesInfo.formula}', '${this.config[0].tablename}' ) `).then((response)=>{
+      if(response.status === "Ok"){
+        this.updateTaTableList()
+      }
+    })
+  }
+
   addBhMainChartHandler(event){
     event.preventDefault();
     event.stopPropagation();
@@ -243,9 +278,13 @@ class App extends React.Component{
     }).then(()=>{
       return db.createTableIfNotAssist('formulas',"CREATE TABLE formulas (ID INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL, name TEXT NOT NULL, formula TEXT NOT NULL, table_stats TEXT NOT NULL )")
     }).then(()=>{
+      return db.createTableIfNotAssist('tatable',"CREATE TABLE tatable (ID INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL, title TEXT, seriesid INTEGER NOT NULL, seriesname TEXT NOT NULL, seriesformula TEXT NOT NULL, table_stats TEXT NOT NULL) ")
+    
+    }).then(()=>{
       this.updateKpiList(this.config[0].tablename)
       this.updateBhLayerChartList()
       this.updateBhMainChartList()
+      this.updateTaTableList()
     })
   }
 
@@ -364,6 +403,18 @@ class App extends React.Component{
     })
   }
 
+  updateTaTableList(){
+    let db = new Database()
+    db.query(`SELECT ID, title, seriesname, seriesformula FROM tatable WHERE table_stats = '${this.config[0].tablename}'`).then((response)=>{
+      if(response.status === "Ok"){
+        console.log(response.result)
+        this.setState({tatablelist: response.result})
+      }else{
+        console.log("Update TA table list unsucessfully")
+      }
+    })
+  }
+
 
   deleteKpiFormula(formulaID){
     let db = new Database()
@@ -383,6 +434,17 @@ class App extends React.Component{
         this.updateBhLayerChartList()
       }else{
         console.log("layer chart list remove unsuccessfully")
+      }
+    })
+  }
+
+  deleteTaTableList(id){
+    let db = new Database()
+    db.delete(`DELETE FROM tatable WHERE ID = ${id}`).then((response)=>{
+      if(response.status === "Ok"){
+        this.updateTaTableList()
+      }else{
+        console.log("ta table list remove unsuccessfully")
       }
     })
   }
@@ -436,6 +498,8 @@ class App extends React.Component{
       snack,
       updateAvailable,
       updateDownloaded,
+      tatablelist, 
+      tatableseries,
     } = this.state
 
     const disabled = removingDuplicated || uploading || removingAll
@@ -583,7 +647,6 @@ class App extends React.Component{
             
           </Card.Body>
         </Card>
-
         <Card className="card-section">
           <Card.Header>
             KPI Graph
@@ -705,10 +768,73 @@ class App extends React.Component{
           </Card.Body>
         </Card>
         
-        <Modal centered onHide={this.handleKpiGraphClose} show={this.state.kpiGraphDialog} dialogClassName="mrchartdialog">
+        <Card className="card-section">
+          <Card.Header>
+            Timing Advance
+          </Card.Header>
+          <Card.Body>
+            <Button variant="secondary" onClick={()=>{this.setState({taTableDialog:true})}} disabled={disabled}>Query TA</Button>
+            <div style={{marginTop:"30px",borderTop:"1px solid #cecece", paddingTop:"10px"}}>
+              <h4>TA Definition</h4>
+                <Form onSubmit={/*this.addBhLayerChartHandler*/this.addTaTableHandler} style={{marginBottom:"10px"}}>
+
+                <Form.Row>
+                  <Form.Group as={Col} controlId="form-table-ta-title">
+                    <Form.Label>TA Range Title</Form.Label>
+                    <Form.Control required type="text" placeholder="Enter graph title"></Form.Control>
+                  </Form.Group>
+                  <Form.Group as={Col}>
+                    <Form.Label>TA Series</Form.Label>
+                    <Dropdown>
+                      <Dropdown.Toggle variant="light">{kpiList[tatableseries] ? kpiList[tatableseries].name : 'Select series'}</Dropdown.Toggle>
+                      <Dropdown.Menu>
+                        {kpiList.map((kpi, kpiid)=>{
+                          return <Dropdown.Item key={kpi.ID} eventKey={kpiid} onSelect={(evtKey)=>{this.setState({tatableseries:evtKey})}}>{kpi.name}</Dropdown.Item>
+                        })}
+                      </Dropdown.Menu>
+                    </Dropdown>
+                  </Form.Group>
+                </Form.Row> 
+                
+                <Button type="submit"  disabled={disabled}>Add</Button>
+              </Form>
+              <Table size="sm">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>TA Title</th>
+                    <th>TA Series</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tatablelist.map((tatable, tatableid)=>{
+                    return (
+                      <tr key={tatableid}>
+                        <td>{tatableid+1}</td>
+                        <td>{tatable.title}</td>
+                        <td>{tatable.seriesname}</td>
+                        <td>{<Delete action={()=>{this.deleteTaTableList(tatable.ID)}}/>}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </Table>
+            </div>
+          </Card.Body>
+        </Card>
+
+        <Modal centered onHide={this.handleKpiGraphClose} show={this.state.kpiGraphDialog} dialogClassName="large-dialog">
           <Modal.Header>KPI Graph</Modal.Header>
           <Modal.Body>
-            <KpiGraph mrlayerlist={mrlayerlist} project={selectedProject} mrmainlist={mrmainlist} />
+            <KpiGraph handleSnackMessage={this.handleSnackMessage} mrlayerlist={mrlayerlist} project={selectedProject} mrmainlist={mrmainlist} />
+          </Modal.Body>
+        </Modal>
+
+        <Modal centered onHide={this.handleTaTableCLose} show={this.state.taTableDialog} dialogClassName="large-dialog">
+          <Modal.Header>TA Table</Modal.Header>
+          <Modal.Body>
+            <TaTable handleSnackMessage={this.handleSnackMessage} tatablelist={tatablelist} project={selectedProject}/>
           </Modal.Body>
         </Modal>
 

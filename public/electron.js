@@ -14,7 +14,7 @@ console.log("App version", app.getVersion())
 /* Load configuration */
 const fs = require("fs")
 const configFilePath = "./config.js"
-let defaultDbPath = path.join(process.cwd(),"core.db")
+let defaultDbPath = path.join(process.cwd(),"database.db")
 let configuration; 
 
 if(fs.existsSync(configFilePath)){

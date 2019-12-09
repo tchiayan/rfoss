@@ -8,7 +8,7 @@ div.card-section:not(:first-child){
     margin-top: 5px;
 }
 
-.mrchartdialog{
+.large-dialog{
     min-width: 90%;
 }
 
