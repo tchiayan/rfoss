@@ -97,6 +97,8 @@ class App extends React.Component{
       mrmainlist: [],
       tatablelist: [],
       tatableseries: 0,
+      tagraphlist: [],
+      tagraphseries: 0,
       taTableDialog: false,
       kpiGraphDialog: false,
       updateAvailable: false, 
@@ -113,6 +115,7 @@ class App extends React.Component{
     this.handleKpiGraphClose = this.handleKpiGraphClose.bind(this)
     this.addBhMainChartHandler = this.addBhMainChartHandler.bind(this)
     this.addTaTableHandler = this.addTaTableHandler.bind(this)
+    this.addTaGraphHandler = this.addTaGraphHandler.bind(this)
     this.handleTaTableCLose = this.handleTaTableCLose.bind(this)
     this.handleSnackClose = this.handleSnackClose.bind(this)
     this.handleSnackMessage = this.handleSnackMessage.bind(this)
@@ -165,6 +168,476 @@ class App extends React.Component{
     this.setState({taTableDialog:false})
   }
 
+  async resetTaTableList(){
+    const kpiList = this.state.kpiList 
+
+    const defaultConfig = [
+      {
+        title: '(0-78m)',
+        series: "TA (0-78m)%"
+      },{
+        title: '(78m-234m)',
+        series: "TA (78m-234m)%"
+      },{
+        title: '(234m-546m)',
+        series: "TA (234m-546m)%"
+      },{
+        title: '(546m-1014m)',
+        series: "TA (546m-1014m)%"
+      },{
+        title: '(1014m-1950m)',
+        series: "TA (1014m-1950m)%"
+      },{
+        title: '(1950m-3510m)',
+        series: "TA (1950m-3510m)%"
+      },{
+        title: '(3510m-6630m)',
+        series: "TA (3510m-6630m)%"
+      },{
+        title: '(6630m-14430m)',
+        series: "TA (6630m-14430m)%"
+      },{
+        title: '(14430m-30030m)',
+        series: "TA (14430m-30030m)%"
+      },{
+        title: '(30030m-53430m)',
+        series: "TA (30030m-53430m)%"
+      },{
+        title: '(53430m-76830m)',
+        series: "TA (53430m-76830m)%"
+      },{
+        title: '(>76830m)',
+        series: "TA (>76830m)%"
+      }
+    ]
+
+    let dbOp = new Database()
+    dbOp.delete("DELETE FROM tatable").then(async (response)=>{
+      let error = false
+      for(let i=0; i < defaultConfig.length ; i++){
+        let config = defaultConfig[i]
+        let db = new Database()
+        const seriesInfo = kpiList.find(entry => entry.name === config.series)
+        if(!seriesInfo){
+          error = true 
+        }else{
+          let query = `INSERT INTO tatable ( title , seriesid , seriesname, seriesformula , table_stats ) VALUES ('${config.title}' , ${seriesInfo.ID} , '${seriesInfo.name}', '${seriesInfo.formula}' , '${this.config[0].tablename}') `
+          let response = await db.update(query)
+          if(response.status !== "Ok"){
+            error = true
+          }
+        }
+      }
+
+      if(error){
+        this.handleSnackMessage("Unable to reset all TA table due to missing KPI, consider resetting KPI  first")
+      }else{
+        this.handleSnackMessage("Reset TA Table successfully")
+      }
+
+      this.updateTaTableList()
+    })
+    
+  }
+
+  async resetTaGraphList(){
+    const kpiList = this.state.kpiList 
+
+    const defaultConfig = [
+      {
+        title: '(0-78m)',
+        series: "TA (0-78m)"
+      },{
+        title: '(78m-234m)',
+        series: "TA (78m-234m)"
+      },{
+        title: '(234m-546m)',
+        series: "TA (234m-546m)"
+      },{
+        title: '(546m-1014m)',
+        series: "TA (546m-1014m)"
+      },{
+        title: '(1014m-1950m)',
+        series: "TA (1014m-1950m)"
+      },{
+        title: '(1950m-3510m)',
+        series: "TA (1950m-3510m)"
+      },{
+        title: '(3510m-6630m)',
+        series: "TA (3510m-6630m)"
+      },{
+        title: '(6630m-14430m)',
+        series: "TA (6630m-14430m)"
+      },{
+        title: '(14430m-30030m)',
+        series: "TA (14430m-30030m)"
+      },{
+        title: '(30030m-53430m)',
+        series: "TA (30030m-53430m)"
+      },{
+        title: '(53430m-76830m)',
+        series: "TA (53430m-76830m)"
+      },{
+        title: '(>76830m)',
+        series: "TA (>76830m)"
+      }
+    ]
+
+    let dbOp = new Database()
+    dbOp.delete("DELETE FROM tagraph").then(async (response)=>{
+      let error = false
+      for(let i=0; i < defaultConfig.length ; i++){
+        let config = defaultConfig[i]
+        let db = new Database()
+        const seriesInfo = kpiList.find(entry => entry.name === config.series)
+        if(!seriesInfo){
+          error = true 
+        }else{
+          let query = `INSERT INTO tagraph ( title , seriesid , seriesname, seriesformula , table_stats ) VALUES ('${config.title}' , ${seriesInfo.ID} , '${seriesInfo.name}', '${seriesInfo.formula}' , '${this.config[0].tablename}') `
+          let response = await db.update(query)
+          if(response.status !== "Ok"){
+            error = true
+          }
+        }
+      }
+
+      if(error){
+        this.handleSnackMessage("Unable to reset all TA graph due to missing KPI, consider resetting KPI  first")
+      }else{
+        this.handleSnackMessage("Reset TA graph successfully")
+      }
+
+      this.updateTaGraphList()
+    })
+    
+  }
+
+  resetBhMainChart(){
+    const kpiList = this.state.kpiList 
+    const defaultConfig = [
+      {
+        title: "CSSR",
+        series: "CSSR",
+        baselinetitle: "CSSR Baseline",
+        baselinevalue: 95
+      },{
+        title: "DCR",
+        series: "DCR",
+        baselinetitle: "DCR Baseline",
+        baselinevalue: 2.5
+      },{
+        title: "HOSR",
+        series: "HOSR",
+        baselinetitle: "HOSR Baseline",
+        baselinevalue: 97
+      },{
+        title: "CSFB SR",
+        series: "CSFB SR",
+        baselinetitle: "CSFB Baseline",
+        baselinevalue: 98.5
+      },{
+        title: "Avg UL Interference(dBm)",
+        series: "Avg UL Interference(dBm)",
+        baselinetitle: null, 
+        baselinevalue: null
+      }
+    ]
+
+    let dbOp = new Database()
+    dbOp.delete("DELETE FROM mrmainchart").then((response)=>{
+      if(response.status === "Ok"){
+        let createDefaultBhMainChart = defaultConfig.map(config => {
+          const seriesInfo = kpiList.find(entry => entry.name === config.series)
+          if(!seriesInfo){
+            return new Promise((resolve, reject)=> {reject("Unable to create BH main Graph due to missing KPI, consider reseting KPI first")})
+          }else{
+            let db = new Database()
+            let query = `INSERT INTO mrmainchart ( title , seriesid, seriesname , seriesformula, baselinetitle, baselinevalue , table_stats) VALUES ( '${config.title}' , ${seriesInfo.ID} , '${seriesInfo.name}', '${seriesInfo.formula}' , ${config.baselinetitle===null?null:`'${config.baselinetitle}'`} , ${config.baselinevalue} , '${this.config[0].tablename}') `
+            return db.update(query)
+          }
+        })
+    
+        Promise.all(createDefaultBhMainChart).then((response)=>{
+          console.log(response)
+          this.handleSnackMessage("Reset BH Main Graph successfully")
+        }).catch((error)=>{
+          console.log(error)
+          this.handleSnackMessage("Unable to reset all BH main graph due to missing KPI, consider resetting KPI  first")
+        }).finally(()=>{
+          this.updateBhMainChartList()
+        })
+      }else{
+        console.log('reset error')
+      }
+    })
+    
+  }
+  resetBhLayerChart(){
+    const kpiList = this.state.kpiList
+
+    const defaultConfig = [
+      {
+        title: 'DL User Throughput(Mbps)',
+        series: "DL User Throughput(Mbps)",
+      },
+      {
+        title: 'DL Max Throughput(Mbps)',
+        series: "DL Max Throughput(Mbps)",
+      },
+      {
+        title: 'Total DL Traffic Volume(GB)',
+        series: "Total DL Traffic Volume(GB)",
+      },
+      {
+        title: 'Avg No. of user',
+        series: "Avg No. of user",
+      },
+      {
+        title: 'PRB DL (%)',
+        series: "PRB DL (%)",
+      },
+      {
+        title: 'DL.CAUser.Traffic(GB)',
+        series: "DL.CAUser.Traffic(GB)",
+      },
+      {
+        title: 'Ave CQI',
+        series: "Ave CQI",
+      },
+      {
+        title: 'L.Traffic.User.PCell.DL.Avg',
+        series: "L.Traffic.User.PCell.DL.Avg",
+      },
+      {
+        title: 'L.Traffic.User.SCell.DL.Avg',
+        series: "L.Traffic.User.SCell.DL.Avg",
+      }
+    ]
+
+    let dbOp = new Database()
+    dbOp.delete("DELETE FROM mrlayerchart").then((response)=>{
+      if(response.status === "Ok"){
+        let createDaultBhLayerChart = defaultConfig.map(config => {
+          const seriesInfo = kpiList.find(entry => entry.name === config.series)
+          if(!seriesInfo){
+            return new Promise((resolve, reject)=> {reject("Unable to create BH Layer Graph due to missing KPI, consider reseting KPI first")})
+          }else{
+            let db = new Database()
+            let query = `INSERT INTO mrlayerchart ( title , seriesid , seriesname , seriesformula , table_stats ) VALUES ( '${config.title}' , ${seriesInfo.ID} , '${seriesInfo.name}' , '${seriesInfo.formula}', '${this.config[0].tablename}')`
+            return db.update(query)
+          }
+        })
+    
+        Promise.all(createDaultBhLayerChart).then(()=>{
+          this.handleSnackMessage("Reset BH Layer Graph successfully")
+        }).catch((error)=>{
+          console.log(error)
+          this.handleSnackMessage("Unable to reset all BH layer graph due to missing KPI, consider resetting KPI first")
+        }).finally(()=>{
+          this.updateBhLayerChartList()
+        })
+      }else{
+        console.log("Reset error")
+      }
+    })
+    
+  }
+
+  resetKpiList(){
+
+    const defaultConfig = [
+      {
+        name: "DL User Throughput(Mbps)",
+        formula: "avg(DL_User_Average_Throughput_Mbps)",
+        counter:["DL_User_Average_Throughput_Mbps"]
+      },{
+        name: "DL Max Throughput(Mbps)",
+        formula: "avg(Cell_DL_Max_ThroughputtoPDCP_Mbps)",
+        counter:["Cell_DL_Max_ThroughputtoPDCP_Mbps"]
+      },{
+        name: "Total DL Traffic Volume(GB)",
+        formula: "avg(Total_DL_Traffic_Volume_GB)",
+        counter:["Total_DL_Traffic_Volume_GB"]
+      },{
+        name: "Avg No. of user",
+        formula: "avg(Avg_No_of_user_number)",
+        counter: ["Avg_No_of_user_number"]
+      },{
+        name: "PRB DL (%)",
+        formula: "avg(PRB_Usage_DL)",
+        counter:["PRB_Usage_DL"]
+      },{
+        name: "DL.CAUser.Traffic(GB)",
+        formula: "avg(DL_CAUser_Traffic_GB)",
+        counter: ["DL_CAUser_Traffic_GB"]
+      },{
+        name: "Ave CQI",
+        formula: "avg(CQI_Avg)",
+        counter: ["CQI_Avg"]
+      },{
+        name: "L.Traffic.User.PCell.DL.Avg",
+        formula: "avg(L_Traffic_User_PCell_DL_Avg)",
+        counter: ["L_Traffic_User_PCell_DL_Avg"]
+      },{
+        name: "L.Traffic.User.SCell.DL.Avg",
+        formula: "avg(L_Traffic_User_SCell_DL_Avg)",
+        counter: ["L_Traffic_User_SCell_DL_Avg"]
+      },{
+        name: "DCR",
+        formula: "avg(ERAB_DCR_MME)",
+        counter: ["ERAB_DCR_MME"]
+      },{
+        name: "HOSR",
+        formula: "avg(HO_Success_Rate)",
+        counter: ["HO_Success_Rate"]
+      },{
+        name: "CSFB SR",
+        formula: "avg(CSFB_Preparation_Success_Rate)",
+        counter: ["CSFB_Preparation_Success_Rate"]
+      },{
+        name: "Avg UL Interference(dBm)",
+        formula: "avg(Avg_UL_Interference_dBm)",
+        counter: ["Avg_UL_Interference_dBm"]
+      },{
+        name: "CSSR",
+        formula: "avg(CSSR)",
+        counter: ["CSSR"]
+      },{
+        name: "TA (0-78m)%",
+        formula: "100*sum(L_RA_TA_UE_Index0)/sum(L_RA_TA_UE_0to11)",
+        counter: ['L_RA_TA_UE_Index0','L_RA_TA_UE_0to11']
+      },{
+        name: "TA (78m-234m)%",
+        formula: "100*sum(L_RA_TA_UE_Index1)/sum(L_RA_TA_UE_0to11)",
+        counter: ['L_RA_TA_UE_Index1','L_RA_TA_UE_0to11']
+      },{
+        name: "TA (234m-546m)%",
+        formula: "100*sum(L_RA_TA_UE_Index2)/sum(L_RA_TA_UE_0to11)",
+        counter: ['L_RA_TA_UE_Index2','L_RA_TA_UE_0to11']
+      },{
+        name: "TA (546m-1014m)%",
+        formula: "100*sum(L_RA_TA_UE_Index3)/sum(L_RA_TA_UE_0to11)",
+        counter: ['L_RA_TA_UE_Index3','L_RA_TA_UE_0to11']
+      },{
+        name: "TA (1014m-1950m)%",
+        formula: "100*sum(L_RA_TA_UE_Index4)/sum(L_RA_TA_UE_0to11)",
+        counter: ['L_RA_TA_UE_Index4','L_RA_TA_UE_0to11']
+      },{
+        name: "TA (1950m-3510m)%",
+        formula: "100*sum(L_RA_TA_UE_Index5)/sum(L_RA_TA_UE_0to11)",
+        counter: ['L_RA_TA_UE_Index5','L_RA_TA_UE_0to11']
+      },{
+        name: "TA (3510m-6630m)%",
+        formula: "100*sum(L_RA_TA_UE_Index6)/sum(L_RA_TA_UE_0to11)",
+        counter: ['L_RA_TA_UE_Index6','L_RA_TA_UE_0to11']
+      },{
+        name: "TA (6630m-14430m)%",
+        formula: "100*sum(L_RA_TA_UE_Index7)/sum(L_RA_TA_UE_0to11)",
+        counter: ['L_RA_TA_UE_Index7','L_RA_TA_UE_0to11']
+      },{
+        name: "TA (14430m-30030m)%",
+        formula: "100*sum(L_RA_TA_UE_Index8)/sum(L_RA_TA_UE_0to11)",
+        counter: ['L_RA_TA_UE_Index8','L_RA_TA_UE_0to11']
+      },{
+        name: "TA (30030m-53430m)%",
+        formula: "100*sum(L_RA_TA_UE_Index9)/sum(L_RA_TA_UE_0to11)",
+        counter: ['L_RA_TA_UE_Index9','L_RA_TA_UE_0to11']
+      },{
+        name: "TA (53430m-76830m)%",
+        formula: "100*sum(L_RA_TA_UE_Index10)/sum(L_RA_TA_UE_0to11)",
+        counter: ['L_RA_TA_UE_Index10','L_RA_TA_UE_0to11']
+      },{
+        name: "TA (>76830m)%",
+        formula: "100*sum(L_RA_TA_UE_Index11)/sum(L_RA_TA_UE_0to11)",
+        counter: ['L_RA_TA_UE_Index11','L_RA_TA_UE_0to11']
+      },{
+        name: "TA (0-78m)",
+        formula: "sum(L_RA_TA_UE_Index0)",
+        counter: ['L_RA_TA_UE_Index0']
+      },{
+        name: "TA (78m-234m)",
+        formula: "sum(L_RA_TA_UE_Index1)",
+        counter: ['L_RA_TA_UE_Index1']
+      },{
+        name: "TA (234m-546m)",
+        formula: "sum(L_RA_TA_UE_Index2)",
+        counter: ['L_RA_TA_UE_Index2']
+      },{
+        name: "TA (546m-1014m)",
+        formula: "sum(L_RA_TA_UE_Index3)",
+        counter: ['L_RA_TA_UE_Index3']
+      },{
+        name: "TA (1014m-1950m)",
+        formula: "sum(L_RA_TA_UE_Index4)",
+        counter: ['L_RA_TA_UE_Index4']
+      },{
+        name: "TA (1950m-3510m)",
+        formula: "sum(L_RA_TA_UE_Index5)",
+        counter: ['L_RA_TA_UE_Index5']
+      },{
+        name: "TA (3510m-6630m)",
+        formula: "sum(L_RA_TA_UE_Index6)",
+        counter: ['L_RA_TA_UE_Index6']
+      },{
+        name: "TA (6630m-14430m)",
+        formula: "sum(L_RA_TA_UE_Index7)",
+        counter: ['L_RA_TA_UE_Index7']
+      },{
+        name: "TA (14430m-30030m)",
+        formula: "sum(L_RA_TA_UE_Index8)",
+        counter: ['L_RA_TA_UE_Index8']
+      },{
+        name: "TA (30030m-53430m)",
+        formula: "sum(L_RA_TA_UE_Index9)",
+        counter: ['L_RA_TA_UE_Index9']
+      },{
+        name: "TA (53430m-76830m)",
+        formula: "sum(L_RA_TA_UE_Index10)",
+        counter: ['L_RA_TA_UE_Index10']
+      },{
+        name: "TA (>76830m)",
+        formula: "sum(L_RA_TA_UE_Index11)",
+        counter: ['L_RA_TA_UE_Index11']
+      }
+    ]
+
+    const counters = this.state.counterName.slice().map(entry => entry.name)
+
+    if(counters.length == 0){
+      this.handleSnackMessage("Empty database. Please upload the raw data into database first")
+      return
+    }
+
+    let dbOp = new Database()
+    dbOp.delete("DELETE FROM formulas").then((response)=>{
+      if(response.status === "Ok"){
+        let createDefaultKpi = defaultConfig.map((config)=>{
+          let _counterExist = config.counter.map(_counter => counters.includes(_counter))
+          if(_counterExist.includes(false)){
+            console.log(`Fail to create KPI ${config.name} due to missing counter`)
+            return new Promise((resolve, reject)=>{reject(false)})
+          }else{
+            let db = new Database()
+            let query = `INSERT INTO formulas ( name , formula , table_stats ) VALUES ( '${config.name}' , '${config.formula}' , '${this.config[0].tablename}')`
+            return db.update(query)
+          }
+        })
+    
+        Promise.all(createDefaultKpi).then(()=>{
+          this.handleSnackMessage("KPI reset successfully")
+        }).catch((error)=>{
+          console.log(error)
+          this.handleSnackMessage("Fail to create some KPI due to missing columns")
+        }).finally(()=>{
+          this.updateKpiList(this.state.selectedProject.tablename)
+        })
+      }else{
+        this.handleSnackMessage("Reset unsuccessfully due to unexpected error")
+      }
+    })
+    
+  }
+
   handleKpiSubmit(event){
     event.preventDefault();
     event.stopPropagation();
@@ -181,7 +654,7 @@ class App extends React.Component{
 
     let formula = kpiFormula
     formula = formula.replace(/(avg|sum)/gi, "")
-    formula = formula.replace(/(\w+)/gi, "C.$1")
+    formula = formula.replace(/([a-z|A-Z]\w+)/gi, "C.$1")
 
     try{
       eval(formula)
@@ -195,11 +668,8 @@ class App extends React.Component{
         }
       })
     }catch(error){
-      console.log("Formula is wrong")
-      let snack = this.state.snack
-      snack.open = true 
-      snack.message = "Incorrect formula"
-      this.setState({snack:snack})
+      console.log(formula)
+      this.handleSnackMessage("Incorrect formula")
     }
   }
 
@@ -227,12 +697,26 @@ class App extends React.Component{
     const title = form.querySelector("#form-table-ta-title").value 
     const seriesInfo = this.state.kpiList[this.state.tatableseries]
 
-    console.log(title)
-    console.log(seriesInfo)
     let db = new Database()
     db.update(`INSERT INTO tatable (title , seriesid , seriesname, seriesformula, table_stats ) VALUES ( '${title}' , ${seriesInfo.ID} , '${seriesInfo.name}' , '${seriesInfo.formula}', '${this.config[0].tablename}' ) `).then((response)=>{
       if(response.status === "Ok"){
         this.updateTaTableList()
+      }
+    })
+  }
+
+  addTaGraphHandler(event){
+    event.preventDefault();
+    event.stopPropagation();
+
+    const form = event.currentTarget;
+    const title = form.querySelector("#form-graph-ta-title").value
+    const seriesInfo = this.state.kpiList.slice()[this.state.tagraphseries]
+
+    let db = new Database()
+    db.update(`INSERT INTO tagraph (title, seriesid , seriesname, seriesformula, table_stats )  VALUES ( '${title}' , ${seriesInfo.ID} , '${seriesInfo.name}' , '${seriesInfo.formula}', '${this.config[0].tablename}' ) `).then((response)=>{
+      if(response.status === "Ok"){
+        this.updateTaGraphList()
       }
     })
   }
@@ -279,12 +763,14 @@ class App extends React.Component{
       return db.createTableIfNotAssist('formulas',"CREATE TABLE formulas (ID INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL, name TEXT NOT NULL, formula TEXT NOT NULL, table_stats TEXT NOT NULL )")
     }).then(()=>{
       return db.createTableIfNotAssist('tatable',"CREATE TABLE tatable (ID INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL, title TEXT, seriesid INTEGER NOT NULL, seriesname TEXT NOT NULL, seriesformula TEXT NOT NULL, table_stats TEXT NOT NULL) ")
-    
+    }).then(()=>{
+      return db.createTableIfNotAssist('tagraph',"CREATE TABLE tagraph (ID INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL, title TEXT, seriesid INTEGER NOT NULL, seriesname TEXT NOT NULL, seriesformula TEXT NOT NULL, table_stats TEXT NOT NULL) ")
     }).then(()=>{
       this.updateKpiList(this.config[0].tablename)
       this.updateBhLayerChartList()
       this.updateBhMainChartList()
       this.updateTaTableList()
+      this.updateTaGraphList()
     })
   }
 
@@ -349,6 +835,7 @@ class App extends React.Component{
     let db = new Database()
     db.run(`DELETE FROM ${this.config[0].tablename} WHERE ID NOT IN ( SELECT MIN(ID) FROM ${this.config[0].tablename} GROUP BY [Cell_Name], date([Date]))`).then((response)=>{
       if(response.status === 'Ok'){
+        this.handleSnackMessage(`Duplicate row [${response.affectedRows}] deleted`)
         console.log(response.affectedRows)
       }
       this.setState({removingDuplicated: false})
@@ -371,6 +858,11 @@ class App extends React.Component{
     let db = new Database()
     db.query(`SELECT ID, name , formula FROM formulas WHERE table_stats = '${tablename}'`).then((response)=>{
       if(response.status === 'Ok'){
+        response.result.sort((a,b)=> {
+          if(a.name>b.name) return 1
+          if(a.name<b.name) return -1
+          return 0
+        })
         console.log(response.result)
         this.setState({kpiList: response.result})
       }else{
@@ -383,7 +875,6 @@ class App extends React.Component{
     let db = new Database()
     db.query(`SELECT ID, title , seriesname, seriesformula FROM mrlayerchart WHERE table_stats = '${this.config[0].tablename}'`).then((response)=>{
       if(response.status === 'Ok'){
-        console.log(response.result)
         this.setState({mrlayerlist: response.result})
       }else{
         console.log("Update kpi list unsuccessfully")
@@ -395,7 +886,6 @@ class App extends React.Component{
     let db = new Database()
     db.query(`SELECT ID, title , seriesname, seriesformula, baselinetitle, baselinevalue FROM mrmainchart WHERE table_stats = '${this.config[0].tablename}'`).then((response)=>{
       if(response.status === 'Ok'){
-        console.log(response.result)
         this.setState({mrmainlist: response.result})
       }else{
         console.log("Update kpi list unsuccessfully")
@@ -407,7 +897,6 @@ class App extends React.Component{
     let db = new Database()
     db.query(`SELECT ID, title, seriesname, seriesformula FROM tatable WHERE table_stats = '${this.config[0].tablename}'`).then((response)=>{
       if(response.status === "Ok"){
-        console.log(response.result)
         this.setState({tatablelist: response.result})
       }else{
         console.log("Update TA table list unsucessfully")
@@ -415,6 +904,16 @@ class App extends React.Component{
     })
   }
 
+  updateTaGraphList(){
+    let db = new Database()
+    db.query(`SELECT ID, title, seriesname, seriesformula FROM tagraph WHERE table_stats = '${this.config[0].tablename}' `).then((response)=>{
+      if(response.status === "Ok"){
+        this.setState({tagraphlist: response.result})
+      }else{
+        console.log("Update TA graph list unsuccessfully")
+      }
+    })
+  }
 
   deleteKpiFormula(formulaID){
     let db = new Database()
@@ -445,6 +944,17 @@ class App extends React.Component{
         this.updateTaTableList()
       }else{
         console.log("ta table list remove unsuccessfully")
+      }
+    })
+  }
+
+  deleteTaGraphList(id){
+    let db = new Database()
+    db.delete(`DELETE FROM tagraph WHERE ID = ${id}`).then((response)=>{
+      if(response.status === "Ok"){
+        this.updateTaGraphList()
+      }else{
+        console.log("ta graph list remove unsuccessfully")
       }
     })
   }
@@ -500,6 +1010,8 @@ class App extends React.Component{
       updateDownloaded,
       tatablelist, 
       tatableseries,
+      tagraphlist,
+      tagraphseries,
     } = this.state
 
     const disabled = removingDuplicated || uploading || removingAll
@@ -554,7 +1066,7 @@ class App extends React.Component{
                     role="status"
                     aria-hidden="true"
                   />}
-                  <div>Delete Duplicated</div>
+                  <div>Delete Duplicate</div>
                 </Button>
               </div>
 
@@ -612,6 +1124,10 @@ class App extends React.Component{
 
                   <Button variant="primary" type="submit" disabled={disabled}>
                     Insert
+                  </Button>
+
+                  <Button variant="primary" disabled={disabled} style={{marginLeft:'10px'}} onClick={()=>{this.resetKpiList()}}>
+                    Reset
                   </Button>
                 </Form>
               </div>
@@ -677,6 +1193,7 @@ class App extends React.Component{
                 </Form.Row> 
                 
                 <Button type="submit"  disabled={disabled}>Add</Button>
+                <Button disabled={disabled} onClick={()=>{this.resetBhLayerChart()}} style={{'marginLeft':'10px'}}>Reset</Button>
               </Form>
               <Table size="sm">
                 <thead>
@@ -736,6 +1253,7 @@ class App extends React.Component{
                 </Form.Row>
                 
                 <Button type="submit"  disabled={disabled}>Add</Button>
+                <Button disabled={disabled} style={{'marginLeft':"10px"}} onClick={()=>{this.resetBhMainChart()}}>Reset</Button>
               </Form>
               <Table size="sm">
                 <thead>
@@ -775,13 +1293,13 @@ class App extends React.Component{
           <Card.Body>
             <Button variant="secondary" onClick={()=>{this.setState({taTableDialog:true})}} disabled={disabled}>Query TA</Button>
             <div style={{marginTop:"30px",borderTop:"1px solid #cecece", paddingTop:"10px"}}>
-              <h4>TA Definition</h4>
-                <Form onSubmit={/*this.addBhLayerChartHandler*/this.addTaTableHandler} style={{marginBottom:"10px"}}>
+              <h4>TA Table</h4>
 
+              <Form onSubmit={/*this.addBhLayerChartHandler*/this.addTaTableHandler} style={{marginBottom:"10px"}}>
                 <Form.Row>
                   <Form.Group as={Col} controlId="form-table-ta-title">
                     <Form.Label>TA Range Title</Form.Label>
-                    <Form.Control required type="text" placeholder="Enter graph title"></Form.Control>
+                    <Form.Control required type="text" placeholder="Enter TA Title"></Form.Control>
                   </Form.Group>
                   <Form.Group as={Col}>
                     <Form.Label>TA Series</Form.Label>
@@ -797,6 +1315,7 @@ class App extends React.Component{
                 </Form.Row> 
                 
                 <Button type="submit"  disabled={disabled}>Add</Button>
+                <Button disabled={disabled} style={{'marginLeft':'10px'}} onClick={()=>{this.resetTaTableList()}}>Reset</Button>
               </Form>
               <Table size="sm">
                 <thead>
@@ -821,6 +1340,52 @@ class App extends React.Component{
                 </tbody>
               </Table>
             </div>
+            <div style={{marginTop:"30px",borderTop:"1px solid #cecece", paddingTop:"10px"}}>
+              <h4>TA Chart</h4>
+              <Form onSubmit={this.addTaGraphHandler} style={{marginBottom:'10px'}}>
+                <Form.Row>
+                  <Form.Group as={Col} controlId="form-graph-ta-title">
+                    <Form.Label>TA Range Title</Form.Label>
+                    <Form.Control required type="text" placeholder="Enter TA Title"></Form.Control>
+                  </Form.Group>
+                  <Form.Group as={Col}>
+                    <Form.Label>TA Series</Form.Label>
+                    <Dropdown>
+                      <Dropdown.Toggle variant="light">{kpiList[tagraphseries] ? kpiList[tagraphseries].name : 'Select series'}</Dropdown.Toggle>
+                      <Dropdown.Menu>
+                        {kpiList.map((kpi, kpiid)=>{
+                          return <Dropdown.Item key={kpi.ID} eventKey={kpiid} onSelect={(evtKey)=>{this.setState({tagraphseries:evtKey})}}>{kpi.name}</Dropdown.Item>
+                        })}
+                      </Dropdown.Menu>
+                    </Dropdown>
+                  </Form.Group>
+                </Form.Row>
+                <Button type="submit"  disabled={disabled}>Add</Button>
+                <Button disabled={disabled} style={{'marginLeft':'10px'}} onClick={()=>{this.resetTaGraphList()}}>Reset</Button>
+              </Form>
+              <Table size="sm">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>TA Title</th>
+                    <th>TA Series</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tagraphlist.map((tagraph, tagraphid)=>{
+                    return (
+                      <tr key={tagraphid}>
+                        <td>{tagraphid+1}</td>
+                        <td>{tagraph.title}</td>
+                        <td>{tagraph.seriesname}</td>
+                        <td>{<Delete action={()=>{this.deleteTaGraphList(tagraph.ID)}}/>}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </Table>
+            </div>
           </Card.Body>
         </Card>
 
@@ -831,10 +1396,10 @@ class App extends React.Component{
           </Modal.Body>
         </Modal>
 
-        <Modal centered onHide={this.handleTaTableCLose} show={this.state.taTableDialog} dialogClassName="large-dialog">
-          <Modal.Header>TA Table</Modal.Header>
+        <Modal centered scrollable onHide={this.handleTaTableCLose} show={this.state.taTableDialog} dialogClassName="large-dialog">
+          <Modal.Header>TA Table & Graph</Modal.Header>
           <Modal.Body>
-            <TaTable handleSnackMessage={this.handleSnackMessage} tatablelist={tatablelist} project={selectedProject}/>
+            <TaTable handleSnackMessage={this.handleSnackMessage} tatablelist={tatablelist} project={selectedProject} tagraphlist={tagraphlist}/>
           </Modal.Body>
         </Modal>
 
