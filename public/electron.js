@@ -169,6 +169,24 @@ ipcMain.on("query", (event, args)=>{
     })
 })
 
+ipcMain.on("querybig", (event, args)=>{
+    let db = new sqlite3.Database(defaultDbPath, (err)=>{
+        if(err) {
+            console.error(err.message)
+        }
+    })
+
+    db.all(args.query, (err, rows)=>{
+        if(!err){
+            event.sender.send(`querybig_${args.session}`, {status: 'Ok', result: JSON.stringify(rows)})
+        }else{
+            console.log(err.message)
+            console.log("Query error: " + args.query)
+            event.sender.send(`querybig_${args.session}`,{status: 'Error'})
+        }
+    })
+})
+
 ipcMain.on("update",(event, args)=>{
     let db = new sqlite3.Database(defaultDbPath, (err)=>{
         if(err) {

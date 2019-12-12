@@ -8,6 +8,7 @@ import CloseIcon from '@material-ui/icons/Close';
 
 import KpiGraph from './KpiGraph';
 import TaTable from './TaTable';
+import Hotspot from './Hotspot';
 
 // Ag-grid Import
 import { AgGridReact } from '@ag-grid-community/react';
@@ -67,6 +68,36 @@ class Delete extends React.Component{
   }
 }
 
+class ShowMore extends React.Component{
+  constructor(props){
+    super(props)
+    this.state = {
+      show: false
+    }
+  }
+  
+  render(){
+    const {
+      children
+    } = this.props
+
+    const {
+      show
+    } = this.state
+
+    return (
+      <div>
+        <div style={{height:show?'auto':'0px', display: show?'block':'none', opacity: show?1:0}} className="animate-height">
+          {children}
+        </div>
+        <div style={{widht:'100%', borderTop:'1px solid gray', marginTop:'10px', display:'flex', justifyContent:'center'}}>
+          <div style={{cursor:'pointer'}} onClick={()=>{this.setState({show:!this.state.show})}}>{show?'Hide':'Show More'}</div>
+        </div>
+      </div>
+   )
+  }
+}
+
 class App extends React.Component{
   constructor(){
     super()
@@ -99,6 +130,7 @@ class App extends React.Component{
       tatableseries: 0,
       tagraphlist: [],
       tagraphseries: 0,
+      hotspotDialog: false,
       taTableDialog: false,
       kpiGraphDialog: false,
       updateAvailable: false, 
@@ -117,6 +149,7 @@ class App extends React.Component{
     this.addTaTableHandler = this.addTaTableHandler.bind(this)
     this.addTaGraphHandler = this.addTaGraphHandler.bind(this)
     this.handleTaTableCLose = this.handleTaTableCLose.bind(this)
+    this.handleHotspotClose = this.handleHotspotClose.bind(this)
     this.handleSnackClose = this.handleSnackClose.bind(this)
     this.handleSnackMessage = this.handleSnackMessage.bind(this)
     this.handleSnackUpdateClose = this.handleSnackUpdateClose.bind(this)
@@ -166,6 +199,10 @@ class App extends React.Component{
 
   handleTaTableCLose(){
     this.setState({taTableDialog:false})
+  }
+
+  handleHotspotClose(){
+    this.setState({hotspotDialog:false})
   }
 
   async resetTaTableList(){
@@ -863,7 +900,6 @@ class App extends React.Component{
           if(a.name<b.name) return -1
           return 0
         })
-        console.log(response.result)
         this.setState({kpiList: response.result})
       }else{
         console.log("Update kpi list unsuccessfully")
@@ -1109,7 +1145,7 @@ class App extends React.Component{
                   enableCellTextSelection={true}
                 /> 
               </div>
-
+              
               <div style={{flexGrow: 1, paddingLeft: "10px"}}>
                 <Form onSubmit={this.handleKpiSubmit}>
                   <Form.Group controlId="form-kpi-name">
@@ -1133,33 +1169,36 @@ class App extends React.Component{
               </div>
 
             </div>
-
-            <div>
-              <Table size="sm" style={{marginTop: '10px'}}>
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Name</th>
-                    <th>Formula</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {kpiList.map((kpi,kpiid) => {
-                    return (
-                      <tr key={kpi.ID}>
-                        <td>{kpiid+1}</td>
-                        <td>{kpi.name}</td>
-                        <td>{kpi.formula}</td>
-                        <td>
-                          <Delete action={()=>this.deleteKpiFormula(kpi.ID)}/>
-                        </td>
-                      </tr>
-                      )
-                  })}
-                </tbody>
-              </Table>
-            </div>
+            
+            <ShowMore>
+              <div>
+                <Table size="sm" style={{marginTop: '10px'}}>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Name</th>
+                      <th>Formula</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {kpiList.map((kpi,kpiid) => {
+                      return (
+                        <tr key={kpi.ID}>
+                          <td>{kpiid+1}</td>
+                          <td>{kpi.name}</td>
+                          <td>{kpi.formula}</td>
+                          <td>
+                            <Delete action={()=>this.deleteKpiFormula(kpi.ID)}/>
+                          </td>
+                        </tr>
+                        )
+                    })}
+                  </tbody>
+                </Table>
+              </div>
+            </ShowMore>
+            
             
           </Card.Body>
         </Card>
@@ -1195,28 +1234,32 @@ class App extends React.Component{
                 <Button type="submit"  disabled={disabled}>Add</Button>
                 <Button disabled={disabled} onClick={()=>{this.resetBhLayerChart()}} style={{'marginLeft':'10px'}}>Reset</Button>
               </Form>
-              <Table size="sm">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Graph Title</th>
-                    <th>Graph Series</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mrlayerlist.map((mrlayer, mrlayerid)=>{
-                    return (
-                      <tr key={mrlayerid}>
-                        <td>{mrlayerid+1}</td>
-                        <td>{mrlayer.title}</td>
-                        <td>{mrlayer.seriesname}</td>
-                        <td><Delete action={()=>{this.deleteLayerChartList(mrlayer.ID)}}/></td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </Table>
+              
+              <ShowMore>
+                <Table size="sm">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Graph Title</th>
+                      <th>Graph Series</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mrlayerlist.map((mrlayer, mrlayerid)=>{
+                      return (
+                        <tr key={mrlayerid}>
+                          <td>{mrlayerid+1}</td>
+                          <td>{mrlayer.title}</td>
+                          <td>{mrlayer.seriesname}</td>
+                          <td><Delete action={()=>{this.deleteLayerChartList(mrlayer.ID)}}/></td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </Table>
+              </ShowMore>
+              
               
             </div>
             <div style={{marginTop:"30px",borderTop:"1px solid #cecece", paddingTop:"10px"}}>
@@ -1255,33 +1298,37 @@ class App extends React.Component{
                 <Button type="submit"  disabled={disabled}>Add</Button>
                 <Button disabled={disabled} style={{'marginLeft':"10px"}} onClick={()=>{this.resetBhMainChart()}}>Reset</Button>
               </Form>
-              <Table size="sm">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Graph Title</th>
-                    <th>Graph Series</th>
-                    <th>Baseline Title</th>
-                    <th>Baseline Value</th>
-                    <th></th>
-                  </tr>
-                  
-                </thead>
-                <tbody>
-                  {mrmainlist.map((mrmain, mrmainid)=>{
-                    return (
-                      <tr key={mrmainid}>
-                        <td>{mrmainid+1}</td>
-                        <td>{mrmain.title}</td>
-                        <td>{mrmain.seriesname}</td>
-                        <td>{mrmain.baselinetitle}</td>
-                        <td>{mrmain.baselinevalue}</td>
-                        <td><Delete action={()=>{this.deleteMainChartList(mrmain.ID)}} /></td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </Table>
+
+              <ShowMore>
+                <Table size="sm">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Graph Title</th>
+                      <th>Graph Series</th>
+                      <th>Baseline Title</th>
+                      <th>Baseline Value</th>
+                      <th></th>
+                    </tr>
+                    
+                  </thead>
+                  <tbody>
+                    {mrmainlist.map((mrmain, mrmainid)=>{
+                      return (
+                        <tr key={mrmainid}>
+                          <td>{mrmainid+1}</td>
+                          <td>{mrmain.title}</td>
+                          <td>{mrmain.seriesname}</td>
+                          <td>{mrmain.baselinetitle}</td>
+                          <td>{mrmain.baselinevalue}</td>
+                          <td><Delete action={()=>{this.deleteMainChartList(mrmain.ID)}} /></td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </Table>
+              </ShowMore>
+              
             </div>
           </Card.Body>
         </Card>
@@ -1317,28 +1364,31 @@ class App extends React.Component{
                 <Button type="submit"  disabled={disabled}>Add</Button>
                 <Button disabled={disabled} style={{'marginLeft':'10px'}} onClick={()=>{this.resetTaTableList()}}>Reset</Button>
               </Form>
-              <Table size="sm">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>TA Title</th>
-                    <th>TA Series</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tatablelist.map((tatable, tatableid)=>{
-                    return (
-                      <tr key={tatableid}>
-                        <td>{tatableid+1}</td>
-                        <td>{tatable.title}</td>
-                        <td>{tatable.seriesname}</td>
-                        <td>{<Delete action={()=>{this.deleteTaTableList(tatable.ID)}}/>}</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </Table>
+              <ShowMore>
+                <Table size="sm">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>TA Title</th>
+                      <th>TA Series</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tatablelist.map((tatable, tatableid)=>{
+                      return (
+                        <tr key={tatableid}>
+                          <td>{tatableid+1}</td>
+                          <td>{tatable.title}</td>
+                          <td>{tatable.seriesname}</td>
+                          <td>{<Delete action={()=>{this.deleteTaTableList(tatable.ID)}}/>}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </Table>
+              </ShowMore>
+              
             </div>
             <div style={{marginTop:"30px",borderTop:"1px solid #cecece", paddingTop:"10px"}}>
               <h4>TA Chart</h4>
@@ -1363,29 +1413,42 @@ class App extends React.Component{
                 <Button type="submit"  disabled={disabled}>Add</Button>
                 <Button disabled={disabled} style={{'marginLeft':'10px'}} onClick={()=>{this.resetTaGraphList()}}>Reset</Button>
               </Form>
-              <Table size="sm">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>TA Title</th>
-                    <th>TA Series</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tagraphlist.map((tagraph, tagraphid)=>{
-                    return (
-                      <tr key={tagraphid}>
-                        <td>{tagraphid+1}</td>
-                        <td>{tagraph.title}</td>
-                        <td>{tagraph.seriesname}</td>
-                        <td>{<Delete action={()=>{this.deleteTaGraphList(tagraph.ID)}}/>}</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </Table>
+              <ShowMore>
+                <Table size="sm">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>TA Title</th>
+                      <th>TA Series</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tagraphlist.map((tagraph, tagraphid)=>{
+                      return (
+                        <tr key={tagraphid}>
+                          <td>{tagraphid+1}</td>
+                          <td>{tagraph.title}</td>
+                          <td>{tagraph.seriesname}</td>
+                          <td>{<Delete action={()=>{this.deleteTaGraphList(tagraph.ID)}}/>}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </Table>
+              </ShowMore>
+              
             </div>
+          </Card.Body>
+        </Card>
+        
+
+        <Card className="card-section">
+          <Card.Header>
+            Hotspot
+          </Card.Header>
+          <Card.Body>
+            <Button variant="secondary" onClick={()=>{this.setState({hotspotDialog:true})}} disabled={disabled}>Query Hotspot</Button>
           </Card.Body>
         </Card>
 
@@ -1400,6 +1463,13 @@ class App extends React.Component{
           <Modal.Header>TA Table & Graph</Modal.Header>
           <Modal.Body>
             <TaTable handleSnackMessage={this.handleSnackMessage} tatablelist={tatablelist} project={selectedProject} tagraphlist={tagraphlist}/>
+          </Modal.Body>
+        </Modal>
+
+        <Modal centered scrollable onHide={this.handleHotspotClose} show={this.state.hotspotDialog} size="lg">
+          <Modal.Header>Hotspot</Modal.Header>
+          <Modal.Body>
+            <Hotspot handleSnackMessage={this.handleSnackMessage} project={selectedProject}/>
           </Modal.Body>
         </Modal>
 

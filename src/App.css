@@ -21,3 +21,7 @@ div.card-section:not(:first-child){
 .database-control{
     margin: 5px 10px 
 }
+
+.animate-height{
+    transition: height 1s ease-in, opacity 1s ease-in;
+}
