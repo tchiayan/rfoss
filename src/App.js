@@ -126,10 +126,12 @@ class App extends React.Component{
       mrlayerlist: [],
       mrmainseries: 0,
       mrmainlist: [],
-      tatablelist: [],
+      bisectorseries: 0,
+      bisectorlist: [],
       tatableseries: 0,
-      tagraphlist: [],
+      tatablelist: [],
       tagraphseries: 0,
+      tagraphlist: [],
       hotspotDialog: false,
       taTableDialog: false,
       kpiGraphDialog: false,
@@ -143,9 +145,10 @@ class App extends React.Component{
 
     this.projectSelectHandler = this.projectSelectHandler.bind(this)
     this.handleKpiSubmit = this.handleKpiSubmit.bind(this)
-    this.addBhLayerChartHandler = this.addBhLayerChartHandler.bind(this)
     this.handleKpiGraphClose = this.handleKpiGraphClose.bind(this)
+    this.addBhLayerChartHandler = this.addBhLayerChartHandler.bind(this)
     this.addBhMainChartHandler = this.addBhMainChartHandler.bind(this)
+    this.addBiSectorChartHandler = this.addBiSectorChartHandler.bind(this)
     this.addTaTableHandler = this.addTaTableHandler.bind(this)
     this.addTaGraphHandler = this.addTaGraphHandler.bind(this)
     this.handleTaTableCLose = this.handleTaTableCLose.bind(this)
@@ -203,6 +206,57 @@ class App extends React.Component{
 
   handleHotspotClose(){
     this.setState({hotspotDialog:false})
+  }
+
+  async resetBiSectorList(){
+    const kpiList = this.state.kpiList 
+
+    const defaultConfig = [
+      {
+        title: 'DL User Throughput(Mbps)',
+        series: "DL User Throughput(Mbps)",
+      },
+      {
+        title: 'Avg No. of user',
+        series: "Avg No. of user",
+      },
+      {
+        title: 'PRB DL (%)',
+        series: "PRB DL (%)",
+      },
+      {
+        title: 'Ave CQI',
+        series: "Ave CQI",
+      }
+    ]
+
+    let dbOp = new Database()
+    dbOp.delete("DELETE FROM bisectorchart").then(async (response)=>{
+      let error = false
+      for(let i=0; i < defaultConfig.length ; i++){
+        let config = defaultConfig[i]
+        let db = new Database()
+        const seriesInfo = kpiList.find(entry => entry.name === config.series)
+        if(!seriesInfo){
+          error = true 
+        }else{
+          let query = `INSERT INTO bisectorchart ( title , seriesid , seriesname , seriesformula , table_stats ) VALUES ( '${config.title}' , ${seriesInfo.ID} , '${seriesInfo.name}' , '${seriesInfo.formula}', '${this.config[0].tablename}')`
+          let response = await db.update(query)
+          if(response.status !== "Ok"){
+            error = true
+          }
+        }
+      }
+
+      if(error){
+        this.handleSnackMessage("Unable to reset all Bisector chart series due to missing KPI, consider resetting KPI  first")
+      }else{
+        this.handleSnackMessage("Reset Bisector Chart successfully")
+      }
+
+    }).finally(()=>{
+      this.updateBiSectorChartList()
+    })
   }
 
   async resetTaTableList(){
@@ -409,6 +463,7 @@ class App extends React.Component{
     })
     
   }
+
   resetBhLayerChart(){
     const kpiList = this.state.kpiList
 
@@ -726,6 +781,21 @@ class App extends React.Component{
     })
   }
 
+  addBiSectorChartHandler(event){
+    event.preventDefault();
+    event.stopPropagation();
+
+    const form = event.currentTarget;
+    const layerTitle = form.querySelector("#form-graph-bisector-title").value 
+    const seriesInfo = this.state.kpiList[this.state.bisectorseries]
+    let db = new Database()
+    db.update(`INSERT INTO bisectorchart ( title , seriesid , seriesname , seriesformula , table_stats ) VALUES ( '${layerTitle}' , ${seriesInfo.ID} , '${seriesInfo.name}' , '${seriesInfo.formula}', '${this.config[0].tablename}')`).then((response)=>{
+      if(response.status === 'Ok'){
+        this.updateBhLayerChartList()
+      }
+    })
+  }
+
   addTaTableHandler(event){
     event.preventDefault();
     event.stopPropagation();
@@ -787,6 +857,10 @@ class App extends React.Component{
     })
   }
 
+  queryCellObject(){
+    let db = new Database();
+    db.query('SELECT DISINCT cellname')
+  }
   initDb(){
     let db = new Database()
     db.mainDb(this.config[0].tablename, ()=>{
@@ -797,6 +871,8 @@ class App extends React.Component{
     db.createTableIfNotAssist('mrlayerchart', 'CREATE TABLE mrlayerchart (ID INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL , title TEXT, seriesid INTEGER NOT NULL, seriesname TEXT NOT NULL, seriesformula TEXT NOT NULL, table_stats TEXT NOT NULL)').then(()=>{
       return db.createTableIfNotAssist('mrmainchart', 'CREATE TABLE mrmainchart (ID INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL , title TEXT, seriesid INTEGER NOT NULL, seriesname TEXT NOT NULL, seriesformula TEXT NOT NULL, baselinetitle TEXT, baselinevalue REAL, table_stats TEXT NOT NULL)')
     }).then(()=>{
+      return db.createTableIfNotAssist('bisectorchart',"CREATE TABLE bisectorchart (ID INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL , title TEXT, seriesid INTEGER NOT NULL, seriesname TEXT NOT NULL, seriesformula TEXT NOT NULL, table_stats TEXT NOT NULL)")
+    }).then(()=>{
       return db.createTableIfNotAssist('formulas',"CREATE TABLE formulas (ID INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL, name TEXT NOT NULL, formula TEXT NOT NULL, table_stats TEXT NOT NULL )")
     }).then(()=>{
       return db.createTableIfNotAssist('tatable',"CREATE TABLE tatable (ID INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL, title TEXT, seriesid INTEGER NOT NULL, seriesname TEXT NOT NULL, seriesformula TEXT NOT NULL, table_stats TEXT NOT NULL) ")
@@ -805,6 +881,7 @@ class App extends React.Component{
     }).then(()=>{
       this.updateKpiList(this.config[0].tablename)
       this.updateBhLayerChartList()
+      this.updateBiSectorChartList()
       this.updateBhMainChartList()
       this.updateTaTableList()
       this.updateTaGraphList()
@@ -907,11 +984,22 @@ class App extends React.Component{
     })
   }
 
-  updateBhLayerChartList(tablename){
+  updateBhLayerChartList(){
     let db = new Database()
     db.query(`SELECT ID, title , seriesname, seriesformula FROM mrlayerchart WHERE table_stats = '${this.config[0].tablename}'`).then((response)=>{
       if(response.status === 'Ok'){
         this.setState({mrlayerlist: response.result})
+      }else{
+        console.log("Update kpi list unsuccessfully")
+      }
+    })
+  }
+
+  updateBiSectorChartList(){
+    let db = new Database()
+    db.query(`SELECT ID, title , seriesname, seriesformula FROM bisectorchart WHERE table_stats = '${this.config[0].tablename}'`).then((response)=>{
+      if(response.status === 'Ok'){
+        this.setState({bisectorlist: response.result})
       }else{
         console.log("Update kpi list unsuccessfully")
       }
@@ -969,6 +1057,17 @@ class App extends React.Component{
         this.updateBhLayerChartList()
       }else{
         console.log("layer chart list remove unsuccessfully")
+      }
+    })
+  }
+
+  deleteBisectorChartList(id){
+    let db = new Database()
+    db.delete(`DELETE FROM bisectorchart WHERE ID = ${id}`).then((response)=>{
+      if(response.status === 'Ok'){
+        this.updateBiSectorChartList()
+      }else{
+        console.log("bisector chart list remove unsuccessfully")
       }
     })
   }
@@ -1041,6 +1140,8 @@ class App extends React.Component{
       mrlayerlist,
       mrmainseries,
       mrmainlist,
+      bisectorseries,
+      bisectorlist,
       snack,
       updateAvailable,
       updateDownloaded,
@@ -1330,6 +1431,61 @@ class App extends React.Component{
               </ShowMore>
               
             </div>
+
+            <div style={{marginTop:"30px",borderTop:"1px solid #cecece", paddingTop:"10px"}}>
+              <h4>BiSector Graph</h4>
+              <Form onSubmit={this.addBiSectorChartHandler} style={{marginBottom:"10px"}}>
+
+                <Form.Row>
+                  <Form.Group as={Col} controlId="form-graph-bisector-title">
+                    <Form.Label>Graph Title</Form.Label>
+                    <Form.Control required type="text" placeholder="Enter graph title"></Form.Control>
+                  </Form.Group>
+                  <Form.Group as={Col}>
+                    <Form.Label>Graph Series</Form.Label>
+                    <Dropdown>
+                      <Dropdown.Toggle variant="light">{kpiList[bisectorseries] ? kpiList[bisectorseries].name : 'Select series'}</Dropdown.Toggle>
+                      <Dropdown.Menu>
+                        {kpiList.map((kpi, kpiid)=>{
+                          return <Dropdown.Item key={kpi.ID} eventKey={kpiid} onSelect={(evtKey)=>{this.setState({bisectorseries:evtKey})}}>{kpi.name}</Dropdown.Item>
+                        })}
+                      </Dropdown.Menu>
+                    </Dropdown>
+                  </Form.Group>
+                </Form.Row> 
+                
+                <Button type="submit"  disabled={disabled}>Add</Button>
+                <Button disabled={disabled} onClick={()=>{this.resetBiSectorList()}} style={{'marginLeft':'10px'}}>Reset</Button>
+              </Form>
+              
+              <ShowMore>
+                <Table size="sm">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Graph Title</th>
+                      <th>Graph Series</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bisectorlist.map((bisector, bisectorid)=>{
+                      return (
+                        <tr key={bisectorid}>
+                          <td>{bisectorid+1}</td>
+                          <td>{bisector.title}</td>
+                          <td>{bisector.seriesname}</td>
+                          <td><Delete action={()=>{this.deleteBisectorChartList(bisector.ID)}}/></td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </Table>
+              </ShowMore>
+              
+              
+            </div>
+
           </Card.Body>
         </Card>
         
@@ -1342,7 +1498,7 @@ class App extends React.Component{
             <div style={{marginTop:"30px",borderTop:"1px solid #cecece", paddingTop:"10px"}}>
               <h4>TA Table</h4>
 
-              <Form onSubmit={/*this.addBhLayerChartHandler*/this.addTaTableHandler} style={{marginBottom:"10px"}}>
+              <Form onSubmit={this.addTaTableHandler} style={{marginBottom:"10px"}}>
                 <Form.Row>
                   <Form.Group as={Col} controlId="form-table-ta-title">
                     <Form.Label>TA Range Title</Form.Label>
@@ -1455,7 +1611,7 @@ class App extends React.Component{
         <Modal centered onHide={this.handleKpiGraphClose} show={this.state.kpiGraphDialog} dialogClassName="large-dialog">
           <Modal.Header>KPI Graph</Modal.Header>
           <Modal.Body>
-            <KpiGraph handleSnackMessage={this.handleSnackMessage} mrlayerlist={mrlayerlist} project={selectedProject} mrmainlist={mrmainlist} />
+            <KpiGraph handleSnackMessage={this.handleSnackMessage} mrlayerlist={mrlayerlist} project={selectedProject} mrmainlist={mrmainlist} bisectorlist={bisectorlist} />
           </Modal.Body>
         </Modal>
 
