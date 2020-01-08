@@ -464,78 +464,76 @@ class App extends React.Component{
     
   }
 
-  resetBhLayerChart(){
+  async resetBhLayerChart(){
     const kpiList = this.state.kpiList
 
     const defaultConfig = [
       {
         title: 'DL User Throughput(Mbps)',
         series: "DL User Throughput(Mbps)",
-      },
-      {
-        title: 'DL Max Throughput(Mbps)',
-        series: "DL Max Throughput(Mbps)",
-      },
-      {
-        title: 'Total DL Traffic Volume(GB)',
-        series: "Total DL Traffic Volume(GB)",
-      },
-      {
+      },{
         title: 'Avg No. of user',
         series: "Avg No. of user",
-      },
-      {
+      },{
         title: 'PRB DL (%)',
         series: "PRB DL (%)",
-      },
-      {
-        title: 'DL.CAUser.Traffic(GB)',
-        series: "DL.CAUser.Traffic(GB)",
-      },
-      {
+      },{
         title: 'Ave CQI',
         series: "Ave CQI",
-      },
-      {
+      },{
+        title: "PDSCH IBLER", 
+        series: "PDSCH IBLER"
+      },{
+        title: 'DL.CAUser.Traffic(GB)',
+        series: "DL.CAUser.Traffic(GB)",
+      },{
+        title: 'DL Max Throughput(Mbps)',
+        series: "DL Max Throughput(Mbps)",
+      },{
         title: 'L.Traffic.User.PCell.DL.Avg',
         series: "L.Traffic.User.PCell.DL.Avg",
-      },
-      {
+      },{
         title: 'L.Traffic.User.SCell.DL.Avg',
         series: "L.Traffic.User.SCell.DL.Avg",
-      }
+      },{
+        title: 'Total DL Traffic Volume(GB)',
+        series: "Total DL Traffic Volume(GB)",
+      },{
+        title: "DL Edge User TP (Mbps)", 
+        series: "DL Edge User TP (Mbps)"
+      },
     ]
 
     let dbOp = new Database()
-    dbOp.delete("DELETE FROM mrlayerchart").then((response)=>{
-      if(response.status === "Ok"){
-        let createDaultBhLayerChart = defaultConfig.map(config => {
-          const seriesInfo = kpiList.find(entry => entry.name === config.series)
-          if(!seriesInfo){
-            return new Promise((resolve, reject)=> {reject("Unable to create BH Layer Graph due to missing KPI, consider reseting KPI first")})
-          }else{
-            let db = new Database()
-            let query = `INSERT INTO mrlayerchart ( title , seriesid , seriesname , seriesformula , table_stats ) VALUES ( '${config.title}' , ${seriesInfo.ID} , '${seriesInfo.name}' , '${seriesInfo.formula}', '${this.config[0].tablename}')`
-            return db.update(query)
+    dbOp.delete("DELETE FROM mrlayerchart").then(async (response)=>{
+      let error = false
+      for(let i=0; i < defaultConfig.length ; i++){
+        let config = defaultConfig[i]
+        let db = new Database()
+        const seriesInfo = kpiList.find(entry => entry.name === config.series)
+        if(!seriesInfo){
+          error = true 
+        }else{
+          let query = `INSERT INTO mrlayerchart ( title , seriesid , seriesname , seriesformula , table_stats ) VALUES ( '${config.title}' , ${seriesInfo.ID} , '${seriesInfo.name}' , '${seriesInfo.formula}', '${this.config[0].tablename}')`
+          let response = await db.update(query)
+          if(response.status !== "Ok"){
+            error = true
           }
-        })
-    
-        Promise.all(createDaultBhLayerChart).then(()=>{
-          this.handleSnackMessage("Reset BH Layer Graph successfully")
-        }).catch((error)=>{
-          console.log(error)
-          this.handleSnackMessage("Unable to reset all BH layer graph due to missing KPI, consider resetting KPI first")
-        }).finally(()=>{
-          this.updateBhLayerChartList()
-        })
-      }else{
-        console.log("Reset error")
+        }
       }
+
+      if(error){
+        this.handleSnackMessage("Unable to create BH Layer Graph due to missing KPI, consider reseting KPI first")
+      }else{
+        this.handleSnackMessage("Reset BH Layer Graph successfull")
+      }
+
+      this.updateBhLayerChartList()
     })
     
   }
 
-  resetKpiList(){
+  async resetKpiList(){
 
     const defaultConfig = [
       {
@@ -574,6 +572,14 @@ class App extends React.Component{
         name: "L.Traffic.User.SCell.DL.Avg",
         formula: "avg(L_Traffic_User_SCell_DL_Avg)",
         counter: ["L_Traffic_User_SCell_DL_Avg"]
+      },{
+        name: "PDSCH IBLER", 
+        formula: "avg(PDSCH_IBLER)",
+        counter: ["PDSCH_IBLER"]
+      },{
+        name: "DL Edge User TP (Mbps)", 
+        formula: "avg(M_DL_Edge_User_Throughput_Mbps)",
+        counter: ["M_DL_Edge_User_Throughput_Mbps"]
       },{
         name: "DCR",
         formula: "avg(ERAB_DCR_MME)",
@@ -701,31 +707,31 @@ class App extends React.Component{
     }
 
     let dbOp = new Database()
-    dbOp.delete("DELETE FROM formulas").then((response)=>{
-      if(response.status === "Ok"){
-        let createDefaultKpi = defaultConfig.map((config)=>{
-          let _counterExist = config.counter.map(_counter => counters.includes(_counter))
-          if(_counterExist.includes(false)){
-            console.log(`Fail to create KPI ${config.name} due to missing counter`)
-            return new Promise((resolve, reject)=>{reject(false)})
-          }else{
-            let db = new Database()
-            let query = `INSERT INTO formulas ( name , formula , table_stats ) VALUES ( '${config.name}' , '${config.formula}' , '${this.config[0].tablename}')`
-            return db.update(query)
-          }
-        })
-    
-        Promise.all(createDefaultKpi).then(()=>{
-          this.handleSnackMessage("KPI reset successfully")
-        }).catch((error)=>{
-          console.log(error)
-          this.handleSnackMessage("Fail to create some KPI due to missing columns")
-        }).finally(()=>{
-          this.updateKpiList(this.state.selectedProject.tablename)
-        })
-      }else{
-        this.handleSnackMessage("Reset unsuccessfully due to unexpected error")
+    dbOp.delete("DELETE FROM formulas").then(async (response)=>{
+      let error = false
+      for(let i=0; i < defaultConfig.length ; i++){
+        let config = defaultConfig[i]
+        let _counterExist = config.counter.map(_counter => counters.includes(_counter))
+        if(_counterExist.includes(false)){
+          error = true
+          console.log(`Fail to create KPI ${config.name} due to missing counter`)
+          break;
+        }
+        let db = new Database()
+        let query = `INSERT INTO formulas ( name , formula , table_stats ) VALUES ( '${config.name}' , '${config.formula}' , '${this.config[0].tablename}')`
+        let response = await db.update(query)
+        if(response.status !== "Ok"){
+          error = true
+        }
       }
+
+      if(error){
+        this.handleSnackMessage("Fail to create some KPI due to missing columns from MR stats.")
+      }else{
+        this.handleSnackMessage("KPI reset successfully")
+      }
+
+      this.updateKpiList(this.state.selectedProject.tablename)
     })
     
   }
@@ -861,6 +867,7 @@ class App extends React.Component{
     let db = new Database();
     db.query('SELECT DISINCT cellname')
   }
+
   initDb(){
     let db = new Database()
     db.mainDb(this.config[0].tablename, ()=>{
@@ -941,6 +948,7 @@ class App extends React.Component{
       this.setState({uploading_count:`Upload count ${param.update_count}`})
     }, ()=>{
       this.setState({uploading:false})
+      this.updateTableColumnAndCountername(this.config[0].tablename)
     })
   }
 
@@ -1235,43 +1243,44 @@ class App extends React.Component{
         <Card className="card-section">
           <Card.Header>KPI</Card.Header>
           <Card.Body>
-            <div style={{display:'flex'}}>
-              <div className="ag-theme-balham" style={{width:'220px', height: '210px'}}>
-                <AgGridReact 
-                  columnDefs={[{headerName:'Counter Name', field:'name', resizable:true}]}
-                  modules={AllCommunityModules}
-                  rowData={
-                    counterName
-                  }
-                  enableCellTextSelection={true}
-                /> 
-              </div>
-              
-              <div style={{flexGrow: 1, paddingLeft: "10px"}}>
-                <Form onSubmit={this.handleKpiSubmit}>
-                  <Form.Group controlId="form-kpi-name">
-                    <Form.Label>KPI Name</Form.Label>
-                    <Form.Control required type="text" placeholder="Enter KPI Name" />
-                  </Form.Group>
-
-                  <Form.Group controlId="form-kpi-formula">
-                    <Form.Label>KPI Formula</Form.Label>
-                    <Form.Control required type="text" placeholder="Enter KPI Fomrula"/>
-                  </Form.Group>
-
-                  <Button variant="primary" type="submit" disabled={disabled}>
-                    Insert
-                  </Button>
-
-                  <Button variant="primary" disabled={disabled} style={{marginLeft:'10px'}} onClick={()=>{this.resetKpiList()}}>
-                    Reset
-                  </Button>
-                </Form>
-              </div>
-
-            </div>
+            
             
             <ShowMore>
+              <div style={{display:'flex'}}>
+                <div className="ag-theme-balham" style={{width:'220px', height: '210px'}}>
+                  <AgGridReact 
+                    columnDefs={[{headerName:'Counter Name', field:'name', resizable:true}]}
+                    modules={AllCommunityModules}
+                    rowData={
+                      counterName
+                    }
+                    enableCellTextSelection={true}
+                  /> 
+                </div>
+                
+                <div style={{flexGrow: 1, paddingLeft: "10px"}}>
+                  <Form onSubmit={this.handleKpiSubmit}>
+                    <Form.Group controlId="form-kpi-name">
+                      <Form.Label>KPI Name</Form.Label>
+                      <Form.Control required type="text" placeholder="Enter KPI Name" />
+                    </Form.Group>
+
+                    <Form.Group controlId="form-kpi-formula">
+                      <Form.Label>KPI Formula</Form.Label>
+                      <Form.Control required type="text" placeholder="Enter KPI Fomrula"/>
+                    </Form.Group>
+
+                    <Button variant="primary" type="submit" disabled={disabled}>
+                      Insert
+                    </Button>
+
+                    <Button variant="primary" disabled={disabled} style={{marginLeft:'10px'}} onClick={()=>{this.resetKpiList()}}>
+                      Reset
+                    </Button>
+                  </Form>
+                </div>
+
+              </div>
               <div>
                 <Table size="sm" style={{marginTop: '10px'}}>
                   <thead>
@@ -1312,6 +1321,9 @@ class App extends React.Component{
 
             <div style={{marginTop:"30px",borderTop:"1px solid #cecece", paddingTop:"10px"}}>
               <h4>BH Layer Graph</h4>
+              
+              
+              <ShowMore>
               <Form onSubmit={this.addBhLayerChartHandler} style={{marginBottom:"10px"}}>
 
                 <Form.Row>
@@ -1331,12 +1343,10 @@ class App extends React.Component{
                     </Dropdown>
                   </Form.Group>
                 </Form.Row> 
-                
+
                 <Button type="submit"  disabled={disabled}>Add</Button>
                 <Button disabled={disabled} onClick={()=>{this.resetBhLayerChart()}} style={{'marginLeft':'10px'}}>Reset</Button>
-              </Form>
-              
-              <ShowMore>
+                </Form>
                 <Table size="sm">
                   <thead>
                     <tr>
@@ -1365,42 +1375,41 @@ class App extends React.Component{
             </div>
             <div style={{marginTop:"30px",borderTop:"1px solid #cecece", paddingTop:"10px"}}>
               <h4>BH Main KPI Graph</h4>
-              <Form onSubmit={this.addBhMainChartHandler} style={{marginBottom:"10px"}}>
-                <Form.Row>
-
-                  <Form.Group as={Col} controlId="form-graph-bh-main-title">
-                    <Form.Label>Graph Title</Form.Label>
-                    <Form.Control required type="text" placeholder="Enter graph title"></Form.Control>
-                  </Form.Group>
-                  <Form.Group as={Col} controlId="form-graph-bh-main-series">
-                    <Form.Label>Graph Series</Form.Label>
-                    <Dropdown>
-                      <Dropdown.Toggle variant="light">{kpiList[mrmainseries] ? kpiList[mrmainseries].name : 'Select series'}</Dropdown.Toggle>
-                      <Dropdown.Menu>
-                        {kpiList.map((kpi,kpiid)=>{
-                          return <Dropdown.Item key={kpi.ID} eventKey={kpiid} onSelect={(evtKey)=>{this.setState({mrmainseries:evtKey})}}>{kpi.name}</Dropdown.Item>
-                        })}
-                      </Dropdown.Menu>
-                    </Dropdown>
-                  </Form.Group>
-                </Form.Row>
-
-                <Form.Row>
-                  <Form.Group as={Col} controlId="form-graph-bh-main-baseline-title">
-                    <Form.Label>Baseline Title</Form.Label>
-                    <Form.Control type="text" placeholder="Baseline Title"></Form.Control>
-                  </Form.Group>
-                  <Form.Group as={Col}  controlId="form-graph-bh-main-baseline-value">
-                    <Form.Label>Baseline Value</Form.Label>
-                    <Form.Control type="text" placeholder="Baseline Value"></Form.Control>
-                  </Form.Group>
-                </Form.Row>
-                
-                <Button type="submit"  disabled={disabled}>Add</Button>
-                <Button disabled={disabled} style={{'marginLeft':"10px"}} onClick={()=>{this.resetBhMainChart()}}>Reset</Button>
-              </Form>
-
               <ShowMore>
+                <Form onSubmit={this.addBhMainChartHandler} style={{marginBottom:"10px"}}>
+                  <Form.Row>
+
+                    <Form.Group as={Col} controlId="form-graph-bh-main-title">
+                      <Form.Label>Graph Title</Form.Label>
+                      <Form.Control required type="text" placeholder="Enter graph title"></Form.Control>
+                    </Form.Group>
+                    <Form.Group as={Col} controlId="form-graph-bh-main-series">
+                      <Form.Label>Graph Series</Form.Label>
+                      <Dropdown>
+                        <Dropdown.Toggle variant="light">{kpiList[mrmainseries] ? kpiList[mrmainseries].name : 'Select series'}</Dropdown.Toggle>
+                        <Dropdown.Menu>
+                          {kpiList.map((kpi,kpiid)=>{
+                            return <Dropdown.Item key={kpi.ID} eventKey={kpiid} onSelect={(evtKey)=>{this.setState({mrmainseries:evtKey})}}>{kpi.name}</Dropdown.Item>
+                          })}
+                        </Dropdown.Menu>
+                      </Dropdown>
+                    </Form.Group>
+                  </Form.Row>
+
+                  <Form.Row>
+                    <Form.Group as={Col} controlId="form-graph-bh-main-baseline-title">
+                      <Form.Label>Baseline Title</Form.Label>
+                      <Form.Control type="text" placeholder="Baseline Title"></Form.Control>
+                    </Form.Group>
+                    <Form.Group as={Col}  controlId="form-graph-bh-main-baseline-value">
+                      <Form.Label>Baseline Value</Form.Label>
+                      <Form.Control type="text" placeholder="Baseline Value"></Form.Control>
+                    </Form.Group>
+                  </Form.Row>
+                  
+                  <Button type="submit"  disabled={disabled}>Add</Button>
+                  <Button disabled={disabled} style={{'marginLeft':"10px"}} onClick={()=>{this.resetBhMainChart()}}>Reset</Button>
+                </Form>
                 <Table size="sm">
                   <thead>
                     <tr>
@@ -1434,31 +1443,31 @@ class App extends React.Component{
 
             <div style={{marginTop:"30px",borderTop:"1px solid #cecece", paddingTop:"10px"}}>
               <h4>BiSector Graph</h4>
-              <Form onSubmit={this.addBiSectorChartHandler} style={{marginBottom:"10px"}}>
-
-                <Form.Row>
-                  <Form.Group as={Col} controlId="form-graph-bisector-title">
-                    <Form.Label>Graph Title</Form.Label>
-                    <Form.Control required type="text" placeholder="Enter graph title"></Form.Control>
-                  </Form.Group>
-                  <Form.Group as={Col}>
-                    <Form.Label>Graph Series</Form.Label>
-                    <Dropdown>
-                      <Dropdown.Toggle variant="light">{kpiList[bisectorseries] ? kpiList[bisectorseries].name : 'Select series'}</Dropdown.Toggle>
-                      <Dropdown.Menu>
-                        {kpiList.map((kpi, kpiid)=>{
-                          return <Dropdown.Item key={kpi.ID} eventKey={kpiid} onSelect={(evtKey)=>{this.setState({bisectorseries:evtKey})}}>{kpi.name}</Dropdown.Item>
-                        })}
-                      </Dropdown.Menu>
-                    </Dropdown>
-                  </Form.Group>
-                </Form.Row> 
-                
-                <Button type="submit"  disabled={disabled}>Add</Button>
-                <Button disabled={disabled} onClick={()=>{this.resetBiSectorList()}} style={{'marginLeft':'10px'}}>Reset</Button>
-              </Form>
+              
               
               <ShowMore>
+                <Form onSubmit={this.addBiSectorChartHandler} style={{marginBottom:"10px"}}>
+                  <Form.Row>
+                    <Form.Group as={Col} controlId="form-graph-bisector-title">
+                      <Form.Label>Graph Title</Form.Label>
+                      <Form.Control required type="text" placeholder="Enter graph title"></Form.Control>
+                    </Form.Group>
+                    <Form.Group as={Col}>
+                      <Form.Label>Graph Series</Form.Label>
+                      <Dropdown>
+                        <Dropdown.Toggle variant="light">{kpiList[bisectorseries] ? kpiList[bisectorseries].name : 'Select series'}</Dropdown.Toggle>
+                        <Dropdown.Menu>
+                          {kpiList.map((kpi, kpiid)=>{
+                            return <Dropdown.Item key={kpi.ID} eventKey={kpiid} onSelect={(evtKey)=>{this.setState({bisectorseries:evtKey})}}>{kpi.name}</Dropdown.Item>
+                          })}
+                        </Dropdown.Menu>
+                      </Dropdown>
+                    </Form.Group>
+                  </Form.Row> 
+
+                  <Button type="submit"  disabled={disabled}>Add</Button>
+                  <Button disabled={disabled} onClick={()=>{this.resetBiSectorList()}} style={{'marginLeft':'10px'}}>Reset</Button>
+                </Form>
                 <Table size="sm">
                   <thead>
                     <tr>
@@ -1498,29 +1507,30 @@ class App extends React.Component{
             <div style={{marginTop:"30px",borderTop:"1px solid #cecece", paddingTop:"10px"}}>
               <h4>TA Table</h4>
 
-              <Form onSubmit={this.addTaTableHandler} style={{marginBottom:"10px"}}>
-                <Form.Row>
-                  <Form.Group as={Col} controlId="form-table-ta-title">
-                    <Form.Label>TA Range Title</Form.Label>
-                    <Form.Control required type="text" placeholder="Enter TA Title"></Form.Control>
-                  </Form.Group>
-                  <Form.Group as={Col}>
-                    <Form.Label>TA Series</Form.Label>
-                    <Dropdown>
-                      <Dropdown.Toggle variant="light">{kpiList[tatableseries] ? kpiList[tatableseries].name : 'Select series'}</Dropdown.Toggle>
-                      <Dropdown.Menu>
-                        {kpiList.map((kpi, kpiid)=>{
-                          return <Dropdown.Item key={kpi.ID} eventKey={kpiid} onSelect={(evtKey)=>{this.setState({tatableseries:evtKey})}}>{kpi.name}</Dropdown.Item>
-                        })}
-                      </Dropdown.Menu>
-                    </Dropdown>
-                  </Form.Group>
-                </Form.Row> 
-                
-                <Button type="submit"  disabled={disabled}>Add</Button>
-                <Button disabled={disabled} style={{'marginLeft':'10px'}} onClick={()=>{this.resetTaTableList()}}>Reset</Button>
-              </Form>
+              
               <ShowMore>
+                <Form onSubmit={this.addTaTableHandler} style={{marginBottom:"10px"}}>
+                  <Form.Row>
+                    <Form.Group as={Col} controlId="form-table-ta-title">
+                      <Form.Label>TA Range Title</Form.Label>
+                      <Form.Control required type="text" placeholder="Enter TA Title"></Form.Control>
+                    </Form.Group>
+                    <Form.Group as={Col}>
+                      <Form.Label>TA Series</Form.Label>
+                      <Dropdown>
+                        <Dropdown.Toggle variant="light">{kpiList[tatableseries] ? kpiList[tatableseries].name : 'Select series'}</Dropdown.Toggle>
+                        <Dropdown.Menu>
+                          {kpiList.map((kpi, kpiid)=>{
+                            return <Dropdown.Item key={kpi.ID} eventKey={kpiid} onSelect={(evtKey)=>{this.setState({tatableseries:evtKey})}}>{kpi.name}</Dropdown.Item>
+                          })}
+                        </Dropdown.Menu>
+                      </Dropdown>
+                    </Form.Group>
+                  </Form.Row> 
+                  
+                  <Button type="submit"  disabled={disabled}>Add</Button>
+                  <Button disabled={disabled} style={{'marginLeft':'10px'}} onClick={()=>{this.resetTaTableList()}}>Reset</Button>
+                </Form>
                 <Table size="sm">
                   <thead>
                     <tr>
@@ -1548,28 +1558,29 @@ class App extends React.Component{
             </div>
             <div style={{marginTop:"30px",borderTop:"1px solid #cecece", paddingTop:"10px"}}>
               <h4>TA Chart</h4>
-              <Form onSubmit={this.addTaGraphHandler} style={{marginBottom:'10px'}}>
-                <Form.Row>
-                  <Form.Group as={Col} controlId="form-graph-ta-title">
-                    <Form.Label>TA Range Title</Form.Label>
-                    <Form.Control required type="text" placeholder="Enter TA Title"></Form.Control>
-                  </Form.Group>
-                  <Form.Group as={Col}>
-                    <Form.Label>TA Series</Form.Label>
-                    <Dropdown>
-                      <Dropdown.Toggle variant="light">{kpiList[tagraphseries] ? kpiList[tagraphseries].name : 'Select series'}</Dropdown.Toggle>
-                      <Dropdown.Menu>
-                        {kpiList.map((kpi, kpiid)=>{
-                          return <Dropdown.Item key={kpi.ID} eventKey={kpiid} onSelect={(evtKey)=>{this.setState({tagraphseries:evtKey})}}>{kpi.name}</Dropdown.Item>
-                        })}
-                      </Dropdown.Menu>
-                    </Dropdown>
-                  </Form.Group>
-                </Form.Row>
-                <Button type="submit"  disabled={disabled}>Add</Button>
-                <Button disabled={disabled} style={{'marginLeft':'10px'}} onClick={()=>{this.resetTaGraphList()}}>Reset</Button>
-              </Form>
+              
               <ShowMore>
+                <Form onSubmit={this.addTaGraphHandler} style={{marginBottom:'10px'}}>
+                  <Form.Row>
+                    <Form.Group as={Col} controlId="form-graph-ta-title">
+                      <Form.Label>TA Range Title</Form.Label>
+                      <Form.Control required type="text" placeholder="Enter TA Title"></Form.Control>
+                    </Form.Group>
+                    <Form.Group as={Col}>
+                      <Form.Label>TA Series</Form.Label>
+                      <Dropdown>
+                        <Dropdown.Toggle variant="light">{kpiList[tagraphseries] ? kpiList[tagraphseries].name : 'Select series'}</Dropdown.Toggle>
+                        <Dropdown.Menu>
+                          {kpiList.map((kpi, kpiid)=>{
+                            return <Dropdown.Item key={kpi.ID} eventKey={kpiid} onSelect={(evtKey)=>{this.setState({tagraphseries:evtKey})}}>{kpi.name}</Dropdown.Item>
+                          })}
+                        </Dropdown.Menu>
+                      </Dropdown>
+                    </Form.Group>
+                  </Form.Row>
+                  <Button type="submit"  disabled={disabled}>Add</Button>
+                  <Button disabled={disabled} style={{'marginLeft':'10px'}} onClick={()=>{this.resetTaGraphList()}}>Reset</Button>
+                </Form>
                 <Table size="sm">
                   <thead>
                     <tr>
