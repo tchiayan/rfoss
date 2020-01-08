@@ -42,7 +42,8 @@
     "build-python": "pyinstaller python\\upload.py --onefile --distpath=public",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
-    "release": "electron-builder --publish=always"
+    "prepublish": "react-scripts build",
+    "publish": "electron-builder --publish=always"
   },
   "eslintConfig": {
     "extends": "react-app"
