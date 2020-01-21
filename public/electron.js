@@ -52,7 +52,7 @@ function createWindow() {
     mainWindow.removeMenu()
     mainWindow.setMenu(null)
 
-    //mainWindow.webContents.openDevTools({mode:'right'})
+    // mainWindow.webContents.openDevTools({mode:'right'})
     autoUpdater.autoDownload = false
     autoUpdater.checkForUpdatesAndNotify();
 
