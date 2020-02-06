@@ -3,6 +3,7 @@ const path = require('path')
 const { ipcMain , dialog , app , Menu , BrowserWindow , electron } = require('electron')
 const sqlite3 = require('sqlite3').verbose();
 const { autoUpdater } = require("electron-updater");
+const express = require('express')
 
 let mainWindow
 let spawnProcess = []
@@ -29,8 +30,8 @@ if(fs.existsSync(configFilePath)){
 
 /* Electron */
 function runApp(){
-    if(isDev){
-        const express = require('express')
+    if(!isDev){
+        console.log('start server')
         const _app = express()
         const _port = 5151
 
@@ -45,6 +46,7 @@ function runApp(){
             createWindow()
         })
     }else{
+        console.log('development detected. load from localhost:3000')
         createWindow()
     }
 }
@@ -73,7 +75,7 @@ function createWindow() {
     mainWindow.removeMenu()
     mainWindow.setMenu(null)
 
-    // mainWindow.webContents.openDevTools({mode:'right'})
+    mainWindow.webContents.openDevTools({mode:'right'})
     autoUpdater.autoDownload = false
     autoUpdater.checkForUpdatesAndNotify();
 
