@@ -701,7 +701,7 @@ class App extends React.Component{
 
     const counters = this.state.counterName.slice().map(entry => entry.name)
 
-    if(counters.length == 0){
+    if(counters.length === 0){
       this.handleSnackMessage("Empty database. Please upload the raw data into database first")
       return
     }
@@ -1120,7 +1120,7 @@ class App extends React.Component{
   }
 
   updateTableColumnAndCountername(tablename){
-    console.log(`SELECT name , type FROM pragma_table_info("${tablename}")`)
+    //console.log(`SELECT name , type FROM pragma_table_info("${tablename}")`)
     let project = (new Database()).query(`SELECT name , type FROM pragma_table_info("${tablename}")`).then((response)=>{
       if(response.status === 'Ok'){
         let selectedTableColDefs = response.result.map(column  => ({headerName: column.name, field: column.name}))

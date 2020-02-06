@@ -20,7 +20,11 @@ func excel(this js.Value, i []js.Value) interface{} {
 	args := i[0]
 	for n := 0; n < length; n++ {
 		chart := args.Index(n)
-		println(chart.Index(2).String())
+		if f.GetSheetIndex(chart.Index(0).String()) == 0 {
+			f.NewSheet(chart.Index(0).String())
+		}	
+		
+		//println(chart.Index(2).String())
 		err := f.AddChart(chart.Index(0).String(), chart.Index(1).String(), chart.Index(2).String())
 		if err != nil {
 			println(err.Error())

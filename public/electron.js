@@ -28,6 +28,27 @@ if(fs.existsSync(configFilePath)){
 }
 
 /* Electron */
+function runApp(){
+    if(isDev){
+        const express = require('express')
+        const _app = express()
+        const _port = 5151
+
+        _app.use("/",express.static('./build'))
+
+        _app.get('/', (req,res)=>{
+            res.sendFile('index.html',{'root':'./build/'})
+        })
+
+        _app.listen(_port, ()=>{
+            console.log(`resources serve on port ${_port}`)
+            createWindow()
+        })
+    }else{
+        createWindow()
+    }
+}
+
 function createWindow() {
     mainWindow = new BrowserWindow({ 
         width: 800, 
@@ -39,9 +60,9 @@ function createWindow() {
         minHeight: 600,
     })
 
-
+    // `file://${path.join(__dirname, '../build/index.html')}`
     mainWindow.loadURL(
-        isDev ? 'http://localhost:3000' : `file://${path.join(__dirname, '../build/index.html')}`,
+        isDev ? 'http://localhost:3000' : 'http://localhost:5151/',
     )
 
     mainWindow.on('closed', () => {
@@ -64,7 +85,7 @@ function createWindow() {
 
 }
 
-app.on('ready', createWindow)
+app.on('ready', runApp)
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
