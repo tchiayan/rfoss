@@ -9,6 +9,7 @@ import CloseIcon from '@material-ui/icons/Close';
 import KpiGraph from './KpiGraph';
 import TaTable from './TaTable';
 import Hotspot from './Hotspot';
+import ExportRawData from './ExportRawData';
 
 // Ag-grid Import
 import { AgGridReact } from '@ag-grid-community/react';
@@ -135,6 +136,7 @@ class App extends React.Component{
       hotspotDialog: false,
       taTableDialog: false,
       kpiGraphDialog: false,
+      exportRawDialog: false, 
       updateAvailable: false, 
       updateDownloaded: false, 
       snack:{
@@ -153,6 +155,7 @@ class App extends React.Component{
     this.addTaGraphHandler = this.addTaGraphHandler.bind(this)
     this.handleTaTableCLose = this.handleTaTableCLose.bind(this)
     this.handleHotspotClose = this.handleHotspotClose.bind(this)
+    this.handleExportRawClose = this.handleExportRawClose.bind(this)
     this.handleSnackClose = this.handleSnackClose.bind(this)
     this.handleSnackMessage = this.handleSnackMessage.bind(this)
     this.handleSnackUpdateClose = this.handleSnackUpdateClose.bind(this)
@@ -169,6 +172,10 @@ class App extends React.Component{
   whereismydb(){
     let db = new Database()
     db.send("whereismydb")
+  }
+
+  showRawExport(){
+    this.setState({exportRawDialog:true})
   }
 
   downloadUpdate(){
@@ -206,6 +213,10 @@ class App extends React.Component{
 
   handleHotspotClose(){
     this.setState({hotspotDialog:false})
+  }
+
+  handleExportRawClose(){
+    this.setState({exportRawDialog:false})
   }
 
   async resetBiSectorList(){
@@ -1234,6 +1245,12 @@ class App extends React.Component{
                   Where is my database?
                 </Button>
               </div>
+
+              <div className="database-control">
+                <Button onClick={()=>{this.showRawExport()}}>
+                  Export Raw Data
+                </Button>
+              </div>
             </div>
             
             
@@ -1637,6 +1654,13 @@ class App extends React.Component{
           <Modal.Header>Hotspot</Modal.Header>
           <Modal.Body>
             <Hotspot handleSnackMessage={this.handleSnackMessage} project={selectedProject}/>
+          </Modal.Body>
+        </Modal>
+
+        <Modal centered scrollable onHide={this.handleExportRawClose} show={this.state.exportRawDialog} size="lg">
+          <Modal.Header>Export Raw Data</Modal.Header>
+          <Modal.Body>
+            <ExportRawData handleSnackMessage={this.handleSnackMessage} project={selectedProject}/>
           </Modal.Body>
         </Modal>
 

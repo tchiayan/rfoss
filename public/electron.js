@@ -35,10 +35,10 @@ function runApp(){
         const _app = express()
         const _port = 5151
 
-        _app.use("/",express.static('./build'))
+        _app.use("/",express.static(`${path.join(__dirname, '../build/')}`))
 
         _app.get('/', (req,res)=>{
-            res.sendFile('index.html',{'root':'./build/'})
+            res.sendFile('index.html',{'root':`${path.join(__dirname, '../build/')}`})
         })
 
         _app.listen(_port, ()=>{
@@ -75,7 +75,7 @@ function createWindow() {
     mainWindow.removeMenu()
     mainWindow.setMenu(null)
 
-    mainWindow.webContents.openDevTools({mode:'right'})
+    // mainWindow.webContents.openDevTools({mode:'right'})
     autoUpdater.autoDownload = false
     autoUpdater.checkForUpdatesAndNotify();
 
