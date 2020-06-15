@@ -4,6 +4,7 @@ const { ipcMain , dialog , app , Menu , BrowserWindow , electron } = require('el
 const sqlite3 = require('sqlite3').verbose();
 const { autoUpdater } = require("electron-updater");
 const express = require('express')
+const machineId = require('node-machine-id').machineId
 
 let mainWindow
 let spawnProcess = []
@@ -53,8 +54,8 @@ function runApp(){
 
 function createWindow() {
     mainWindow = new BrowserWindow({ 
-        width: 800, 
-        height: 600 , 
+        width: 950, 
+        height: 700 , 
         webPreferences: {
             nodeIntegration: true
         },
@@ -75,7 +76,7 @@ function createWindow() {
     mainWindow.removeMenu()
     mainWindow.setMenu(null)
 
-    // mainWindow.webContents.openDevTools({mode:'right'})
+    mainWindow.webContents.openDevTools({mode:'bottom'})
     autoUpdater.autoDownload = false
     autoUpdater.checkForUpdatesAndNotify();
 
@@ -110,6 +111,53 @@ app.on('window-all-closed',()=>{
     }
 })
 
+ipcMain.on('excel', (event, arg)=>{
+    const { spawn } = require("child_process")
+    const script = isDev ?  `${__dirname}\\..\\python\\excel.py` : `${__dirname}/../../app.asar.unpacked/excel.exe`
+    const scriptArgv = []
+    console.log("Run command: " , script, scriptArgv.join(" "))
+    let process = isDev ? spawn('python' , [script]) : spawn(script, scriptArgv)
+
+    
+    let dataString = ""
+    /*Here we are saying that every time our node application receives data from the python process output stream(on 'data'), we want to convert that received data into a string and append it to the overall dataString.*/
+    process.stdout.on('data', function(data){
+        dataString += data.toString();
+    });
+    
+    /*Once the stream is done (on 'end') we want to simply log the received data to the console.*/
+    process.stdout.on('end', function(){
+        console.log(dataString);
+    });
+
+    process.stderr.on('data', (data)=>{
+        dataString += data.toString();
+    })
+    process.stderr.on('end', function(){
+        console.log(dataString);
+    });
+
+    console.log('Input data into excel application')
+    process.stdin.write(JSON.stringify(arg.steps))
+    process.stdin.end();
+
+    
+    process.on("close",(code,signal)=>{
+        console.log("Command return signal", code, signal)
+        if(code==0){
+            //trigger complete ack to renderer
+            console.log("excel run successfully")
+            event.sender.send(`excel_${arg.session}`, {status:'Ok', data: dataString})
+        }else{
+            // prompt error
+            //const errorDialog = require('electron').dialog
+            console.log("excel run with error")
+            console.log(dataString)
+            event.sender.send(`excel_${arg.session}`, {status:'Error',error:dataString})
+        }
+    })
+})
+
 ipcMain.on('uploadFileStatus', (event, arg) => {
     dialog.showOpenDialog({
         properties: ['openFile']
@@ -118,12 +166,13 @@ ipcMain.on('uploadFileStatus', (event, arg) => {
             let filePaths = dialogResult.filePaths;
             
             const { spawn } = require("child_process")
-            const script = isDev ?  `${__dirname}/upload.exe` : `${__dirname}/../../app.asar.unpacked/upload.exe`
+            const script = isDev ?  `${__dirname}\\..\\python\\upload.py` : `${__dirname}/../../app.asar.unpacked/upload.exe`
+            //const script = isDev ?  `${__dirname}/upload.exe` : `${__dirname}/../../app.asar.unpacked/upload.exe`
             const scriptArgv = ['upload', defaultDbPath ,arg.tablename, filePaths[0]]
             
             event.sender.send('uploadFileStatus_'+arg.session+'_start')
             console.log("Run command: " , script, scriptArgv.join(" "))
-            let process = spawn(script, scriptArgv)
+            let process = isDev ? spawn('python', [script , ...scriptArgv]) : spawn(script, scriptArgv)
             spawnProcess.push(process)
 
             let bufferData = ""
@@ -139,9 +188,17 @@ ipcMain.on('uploadFileStatus', (event, arg) => {
                 bufferData = data.toString().slice(lastIndexOf+1)
             })
 
+            let errorBuffer = ""
+            process.stderr.on('data', (data)=>{
+                errorBuffer += data.toString();
+            })
+            process.stderr.on('end', function(){
+                console.log(errorBuffer);
+            });
+
             process.on("close",(code,signal)=>{
                 console.log("Command return signal", code, signal)
-                if(signal==null){
+                if(code==0){
                     //trigger complete ack to renderer
                     console.log("upload stats finish")
                     spawnProcess.splice(spawnProcess.indexOf(process,1))
@@ -150,8 +207,9 @@ ipcMain.on('uploadFileStatus', (event, arg) => {
                     event.sender.send(`uploadFileStatus_${arg.session}`)
                 }else{
                     // prompt error
-                    //const errorDialog = require('electron').dialog
-                    console.log("Error")
+                    console.log("Error while importing stats into database")
+                    console.log(errorBuffer)
+                    event.sender.send(`dbase_${arg.tablename}_error`)
                     spawnProcess.splice(spawnProcess.indexOf(process,1))
                 }
             })
@@ -159,6 +217,13 @@ ipcMain.on('uploadFileStatus', (event, arg) => {
     })
 })
 
+
+// Get computer uniqye id 
+ipcMain.on('comp_id', (event,args)=>{
+    machineId().then(id => {
+        event.sender.send("comp_id_res", id)
+    })
+})
 // Query Latest Stats
 ipcMain.on("queryLatestStats", (event, args)=>{
     let db = new sqlite3.Database(defaultDbPath, (err) => {
@@ -277,6 +342,7 @@ ipcMain.on("run", (event, args)=>{
             console.log(this.changes)
             event.sender.send(`run_${args.session}`,{status:'Ok',affectedRows:this.changes})
         }else{
+            console.log(err)
             event.sender.send(`run_${args.session}`,{status:'Error'})
         }
     })

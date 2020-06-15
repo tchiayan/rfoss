@@ -96,32 +96,40 @@ def updateTable(conn, tablename, excelfilepath):
             #print(headers)
             set_headers = set(headers)
             set_uploadHeader = set(uploadHeader)
+            missing_header = list(set_uploadHeader-set_headers)
+            if not len(missing_header) == 0:
+                print(json.dumps({'error':'missing column'}))
+                return
+
+        # get total rowcount 
+        if ws.max_row == 1:
+            ws.reset_dimensions()
+            ws.calculate_dimension(force=True)
+
+        maxcount = ws.max_row
+        '''hasnext = True
+        batchcount = 0
+        readbatch = 20000
+        maxcount = 0
+        while hasnext:
+            currentCount = [0 if row[0].value == None else 1 for index , row in enumerate(ws.iter_rows(min_row=1+batchcount*readbatch, max_col=1, max_row=(1+batchcount)*readbatch))].count(1)
+            maxcount += currentCount
+            print("Current batch:" , currentCount, "Total batch", maxcount)
+            if not currentCount == readbatch:
+                hasnext = False
+                print("Reading finish")
+            else:
+                #print("Reading next batch")
+                batchcount += 1
             
-            print(list(set_uploadHeader-set_headers))
-            print(list(set_headers-set_uploadHeader))
-            if len(list(set_uploadHeader-set_headers)) > 0 and len(list(set_headers-set_uploadHeader)) == 0:
-                add_table_header = [_h  for _h in uploadHeader if _h in list(set_uploadHeader-set_headers)]
-                add_table_columnType = [ columnType[uploadHeader.index(_header)] for _header in add_table_header]
-
-                for alter in map(lambda x, y : x + " " + y, add_table_header, add_table_columnType):
-                    print(alter)
-                    modifyTableQuery = "ALTER TABLE {} ADD {}".format(tablename,alter)
-                    try:
-                        cursor.execute(modifyTableQuery)
-                    except Exception as e:
-                        print("Alter table command error: ", modifyTableQuery)
-                        raise(e)
-
-                print(json.dumps({'table_modified':True}))
-            print("Proceed with updating the stats")
-
-
-        print("Updating table {}".format(tablename))
+        print(maxcount)
+        print("Updating table {}".format(tablename))'''
         cursor.execute("SELECT * FROM {} LIMIT 1".format(tablename))
         headers = list(map(lambda x: x[0], cursor.description))[1:]
 
-        for index , row in enumerate(ws.iter_rows(min_row=1, max_col=len(headers), max_row=1000000)):
-            
+        #progress = 0
+        #for index , row in enumerate(ws.iter_rows(min_row=1, max_col=len(headers), max_row=1000000)):
+        for index , row in enumerate(ws.rows):
             line = [cell.value  for cell in row]
             if not (index == 0 or line[0] == None):
                 insertString = "INSERT INTO {} ({}) VALUES ({})".format(tablename, ",".join(headers),",".join(["?"]*len(headers)))
@@ -129,7 +137,9 @@ def updateTable(conn, tablename, excelfilepath):
                 #cursor.execute(insertString, tuple(map(valueConvert, line ,datatypes)))
                 cursor.execute(insertString, tuple(line))
                 insertRowCount += cursor.rowcount
-                print(json.dumps({'update_count':insertRowCount}))
+                #if not progress == round(insertRowCount/float(maxcount),2):
+                progress = round(insertRowCount/float(maxcount),2)
+                print(json.dumps({'update_count':insertRowCount, 'progress':progress}))
                 
                 
         sys.stdout.write("Update Success Count: {}\r\n".format(insertRowCount))
