@@ -53,7 +53,7 @@
     "build-excel-python":"pyinstaller python\\excel.py --onefile --distpath=public",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
-    "prepublish": "react-scripts build",
+    "prepublish": "react-scripts build && pyinstaller python\\upload.py --onefile --distpath=public && pyinstaller python\\excel.py --onefile --distpath=public",
     "publish": "electron-builder --publish=always"
   },
   "eslintConfig": {
@@ -92,7 +92,8 @@
     }],
     "win": {
       "publish": [
-        "github"
+        "github",
+        "bitbucket"
       ]
     },
     "nsis": {
