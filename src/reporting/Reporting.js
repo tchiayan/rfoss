@@ -9,7 +9,6 @@ import {
     Route,
     Link, 
     useRouteMatch,
-    Redirect, 
     useHistory
 } from "react-router-dom";
 
@@ -27,32 +26,35 @@ function Reporting(props){
     let [ sites , setSites ] = React.useState('sedu')
     let [ querying , setQuerying ] = React.useState(false)
     let [ refreshing , setRefreshing ] = React.useState(false)
-    let [ error , setError ] = React.useState(null)
     let history = useHistory()
+    const dependancy = [ 'bhlayer', 'bhmain', 'bisector', 'tatable2', 'tagraph2']
+    const [ dependancyTest , setDependancyTest ] = React.useState(false)
 
     React.useEffect(()=>{setTitle(title)},[title])
     React.useEffect(()=>{
         
         (async ()=> {   
             let db = new Database()
-            let tableChecking = ['bhlayer', 'bhmain', 'bisector', 'tatable2', 'tagraph2']
-            for(let i =0 ,table; table = tableChecking[i]; i++){
+            let hasAllDatabase = false
+            for(let i =0 ,table; table = dependancy[i]; i++){
                 let hasTable = await db.tableExist(table).then((response) => {
                     return response
                 }).catch((error)=>{
                     console.log(error.message)
                 })
-
                 if(!hasTable){
+                    setDependancyTest(false)
+                    hasAllDatabase = false
                     history.push(`${match.url}/error`)
-                    
-                    setError(true);
                     break;
+                }else{
+                    hasAllDatabase = true
                 }
             }
-
-            history.push(`${match.url}/bhlayer`)
-            setError(false)
+            if(hasAllDatabase){
+                history.push(`${match.url}/bhlayer`)
+                setDependancyTest(true)
+            }
         })()
 
     },[])
@@ -60,19 +62,19 @@ function Reporting(props){
     return <>
         <Nav fill variant="tabs" defaultActiveKey="bhlayer">
             <Nav.Item>
-                <Nav.Link disabled={error} as={Link} to={`${match.url}/bhlayer`} eventKey="bhlayer">BH Layer Graph</Nav.Link>
+                <Nav.Link disabled={!dependancyTest} as={Link} to={`${match.url}/bhlayer`} eventKey="bhlayer">BH Layer Graph</Nav.Link>
             </Nav.Item>
             <Nav.Item>
-                <Nav.Link disabled={error} as={Link} to={`${match.url}/bhmain`} eventKey="bhmain">BH Main Graph</Nav.Link>
+                <Nav.Link disabled={!dependancyTest} as={Link} to={`${match.url}/bhmain`} eventKey="bhmain">BH Main Graph</Nav.Link>
             </Nav.Item>
             <Nav.Item>
-                <Nav.Link disabled={error} as={Link} to={`${match.url}/bisector`} eventKey="bisector">BiSector Graph</Nav.Link>
+                <Nav.Link disabled={!dependancyTest} as={Link} to={`${match.url}/bisector`} eventKey="bisector">BiSector Graph</Nav.Link>
             </Nav.Item>
             <Nav.Item>
-                <Nav.Link disabled={error} as={Link} to={`${match.url}/ta`} eventKey="ta">TA</Nav.Link>
+                <Nav.Link disabled={!dependancyTest} as={Link} to={`${match.url}/ta`} eventKey="ta">TA</Nav.Link>
             </Nav.Item>
         </Nav>
-        <div style={{height: 'calc( 100vh - 170px )', position:'relative'}}>
+        <div style={{height: 'calc( 100vh - 180px )', position:'relative'}}>
             <Switch>
                 <Route path={`${match.url}/bhlayer`}>
                     <BhLayer 
@@ -127,6 +129,13 @@ function Reporting(props){
                         </Header>
                     </Segment>
                 </Route>
+                <Route path={`${match.url}`}>
+                    <Segment placeholder  style={{height: 'calc( 100vh - 216px )', margin: '10px 0px'}}>
+                        <Header icon>
+                            Loading...
+                        </Header>
+                    </Segment>
+                </Route>
             </Switch>
 
         </div>
@@ -139,9 +148,13 @@ function Reporting(props){
                     <Form.Input defaultValue="sedu" size="small" type='text' label="Site" placeholder="Enter sites/cell" onBlur={(e)=>setSites(e.target.value)}/> 
                 </Form.Group>
             </Form>
-            <div style={{marginLeft: '10px'}}><Button disabled={querying} onClick={()=>setRefreshing(true)}>Refresh</Button></div>
+            <div style={{marginLeft: '10px'}}><Button disabled={querying} onClick={()=>{setRefreshing(true);console.log(`set refreshing true`)}}>Refresh</Button></div>
         </div>
     </>
+}
+
+function CheckRequiredDatabase(){
+    
 }
 
 export default Reporting

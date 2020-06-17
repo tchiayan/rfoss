@@ -5,6 +5,7 @@ import { Modal , Overlay , Spinner } from 'react-bootstrap';
 import { Database } from '../Database';
 import SettingModal from '../module/SettingModal';
 import { pivot } from '../module/Function';
+import FreezeContext from '../module/FreezeView';
 
 import * as moment from 'moment';
 import Highcharts from "highcharts";
@@ -77,6 +78,7 @@ function BiSector(props){
     const [ celllist , setCelllist ] = React.useState([])
     const [ rowData , setRowData ] = React.useState([])
     const [ showSetting , setShowSetting ] = React.useState(false)
+    const freezeContext = React.useContext(FreezeContext)
     const moreTarget = React.useRef();
 
     const loadChartConfig = () => {
@@ -159,7 +161,7 @@ function BiSector(props){
     
     const queryFunction = (_chartList) => {
         setQuerying(true)
-        let queryString = `SELECT strftime('%m/%d/%Y',Date([Date])) as key , strftime('%H:%M', [time]) as [bhtime], substr([Cell_Name],0,9) as [Entity] , ${_chartList.map(config => `${config.formula} AS [${config.name}]`).join(",")} FROM main WHERE ([Date] between '${startDate}' and  '${endDate}') and [Cell_Name] LIKE '${sites}%' GROUP BY Date([Date]) , substr([Cell_Name],0,9)` 
+        let queryString = `SELECT strftime('%m/%d/%Y',Date([Date])) as key , strftime('%H:%M', [time]) as [bhtime], substr([Cell_Name],0,9) as [Entity] , ${_chartList.map(config => `${config.formula} AS [${config.name}]`).join(",")} FROM main WHERE ([Date] between '${startDate}' and  '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:MM:SS")}') and [Cell_Name] LIKE '${sites}%' GROUP BY Date([Date]) , substr([Cell_Name],0,9)` 
         
         let db = new Database().query(queryString)
         db.then((response)=>{
@@ -220,10 +222,13 @@ function BiSector(props){
                 }) => (
                     <Menu {...props} style={{...props.style}} vertical pointing={true}>
                         <Menu.Item name="export-excel" disabled={charts.length === 0}onClick={()=>{
+                            freezeContext.setFreeze(true, "Exporting...")
                             let db = new Database()
                             db.excelService([
                                 {operation:'chart',highchart:charts}
-                            ])
+                            ]).then((response)=>{
+                                freezeContext.setFreeze(false)
+                            })
                             setShowMore(false)
                         }}>Export to excel</Menu.Item>
                         <Menu.Item name="chart-setting" onClick={()=>{
@@ -234,7 +239,7 @@ function BiSector(props){
                 )}
             </Overlay>
         </div>
-        {charts.length === 0 && !querying &&  <Segment placeholder style={{height: 'calc( 100% - 20px)', margin: '10px 0px'}}>
+        {charts.length === 0 && !querying &&  <Segment placeholder style={{height: 'calc( 100vh - 244px)', margin: '10px 0px'}}>
             <Header icon>
                 <Icon name='chart bar' />
                 Specify start date , end date and sites

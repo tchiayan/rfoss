@@ -50,7 +50,7 @@
     "eject": "react-scripts eject",
     "postinstall": "electron-builder install-app-deps",
     "build-upload-python": "pyinstaller python\\upload.py --onefile --distpath=public",
-    "build-excel-python":"pyinstaller python\\excel.py --onefile --distpath=public",
+    "build-excel-python": "pyinstaller python\\excel.py --onefile --distpath=public",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
     "prepublish": "react-scripts build && pyinstaller python\\upload.py --onefile --distpath=public && pyinstaller python\\excel.py --onefile --distpath=public",
@@ -77,24 +77,28 @@
   },
   "homepage": ".",
   "build": {
-    "appId": "com.electron.stdmaxistool",
+    "appId": "com.electron.rfosstool",
+    "productName":"RF OSS",
     "asar": true,
     "files": [
       "!build/upload.exe",
       "!build/excel.exe"
     ],
-    "extraResources": [{
-      "from": "build/upload.exe",
-      "to": "app.asar.unpacked/upload.exe"
-    },{
-      "from": "build/excel.exe",
-      "to": "app.asar.unpacked/excel.exe"
-    }],
+    "extraResources": [
+      {
+        "from": "build/upload.exe",
+        "to": "app.asar.unpacked/upload.exe"
+      },
+      {
+        "from": "build/excel.exe",
+        "to": "app.asar.unpacked/excel.exe"
+      }
+    ],
     "win": {
-      "publish": [
-        "github",
-        "bitbucket"
-      ]
+      "publish": [{
+        "provider":"generic",
+        "url":"https://www.mapgit.com"
+      }]
     },
     "nsis": {
       "oneClick": false,

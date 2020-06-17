@@ -5,6 +5,7 @@ import { Modal , Overlay , Spinner } from 'react-bootstrap';
 import { Database } from '../Database';
 import SettingModal from '../module/SettingModal';
 import { pivot } from '../module/Function';
+import FreezeContext from '../module/FreezeView';
 import * as moment from 'moment'
 import Highcharts from "highcharts";
 import HighchartsCustomEvents from 'highcharts-custom-events';
@@ -73,6 +74,7 @@ function BhMain(props){
     const [ chartConfig , setChartConfig ] = React.useState({show: false, min: null , max: null , id: null, axis: 0})
     const [ chartSetting , setChartSetting ] = React.useState(false)
     const [ showMore , setShowMore ] = React.useState(false)
+    const freezeContext = React.useContext(FreezeContext)
     const moreTarget = React.useRef(null)
 
     const loadChartConfig = () => {
@@ -91,7 +93,7 @@ function BhMain(props){
 
     const queryFunction = (_chartList) => {
         setQuerying(true)
-        let queryString = `SELECT strftime('%m/%d/%Y',Date([Date])) as key , strftime('%H:%M', [time]) as [bhtime], substr([Cell_Name],0,9) as [Entity] , ${_chartList.map(config => `${config.formula} AS [${config.name}]`).join(",")} FROM main WHERE ([Date] between '${startDate}' and '${endDate}') and [Cell_Name] LIKE '${sites}%' GROUP BY Date([Date]) , substr([Cell_Name],0,9)` 
+        let queryString = `SELECT strftime('%m/%d/%Y',Date([Date])) as key , strftime('%H:%M', [time]) as [bhtime], substr([Cell_Name],0,9) as [Entity] , ${_chartList.map(config => `${config.formula} AS [${config.name}]`).join(",")} FROM main WHERE ([Date] between '${startDate}' and '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:MM:SS")}') and [Cell_Name] LIKE '${sites}%' GROUP BY Date([Date]) , substr([Cell_Name],0,9)` 
         let db = new Database().query(queryString)
         db.then((response)=>{
             if(response.status === 'Ok'){
@@ -216,10 +218,13 @@ function BhMain(props){
                             setShowMore(false)
                         }}>Chart setting</Menu.Item>
                         <Menu.Item name="export-excel" onClick={()=>{
+                            freezeContext.setFreeze(true, "Exporting...")
                             let db = new Database()
                             db.excelService([
                                 {operation:'chart',highchart:charts}
-                            ])
+                            ]).then(()=>{
+                                freezeContext.setFreeze(false)
+                            })
                             setShowMore(false)
                         }}>Export to excel</Menu.Item>
                     </Menu>
@@ -233,7 +238,7 @@ function BhMain(props){
                 <div>Querying... </div>
             </div>
         </div>}
-        {charts.length === 0 && !querying && <Segment placeholder style={{height: 'calc( 100vh - 216px )', margin: '10px 0px'}}>
+        {charts.length === 0 && !querying && <Segment placeholder style={{height: 'calc( 100vh - 244px )', margin: '10px 0px'}}>
              <Header icon>
                 <Icon name='chart bar' />
                 Specify start date , end date and sites
@@ -247,6 +252,7 @@ function BhMain(props){
             setChartConfig({show: false , min:null , max: null , chartId: null, axis: 0})
         }} min={chartConfig.min} max={chartConfig.max} chartId={chartConfig.chartId} axis={chartConfig.axis} changeScale={(id , min , max, axis)=>{
             let _charts = charts.slice() 
+            
             let _chart = _charts.find(ch => ch.id === id)
             _chart.yAxis[axis]['min'] = min 
             _chart.yAxis[axis]['max'] = max

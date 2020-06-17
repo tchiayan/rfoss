@@ -10,6 +10,7 @@ import SettingModal from '../module/SettingModal';
 import { FixedSizeList as List } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { pivot } from '../module/Function';
+import FreezeContext from '../module/FreezeView';
 
 import Highcharts from "highcharts";
 import HighchartsCustomEvents from 'highcharts-custom-events';
@@ -79,6 +80,7 @@ function BhLayer(props){
     const [ chartConfig , setChartConfig ] = React.useState({show: false, min: null , max: null , id: null, axis: 0})
     const [ chartSetting , setChartSetting ] = React.useState(false)
     const [ showMore , setShowMore ] = React.useState(false)
+    const freezeContext = React.useContext(FreezeContext)
     const moreTarget = React.useRef();
 
     const loadChartConfig = () => {
@@ -96,8 +98,9 @@ function BhLayer(props){
     }
 
     const queryFunction = (_chartList) => {
+        console.log(`Query chart`)
         setQuerying(true)
-        let queryString = `SELECT strftime('%m/%d/%Y',Date([Date])) as key , strftime('%H:%M', [time]) as [bhtime], substr([Cell_Name],0,9) as [Entity] , ${_chartList.map(config => `${config.formula} AS [${config.name}]`).join(",")} FROM main WHERE ( [Date] between '${startDate}' and  '${endDate}' ) and [Cell_Name] LIKE '${sites}%' GROUP BY Date([Date]) , substr([Cell_Name],0,9)` 
+        let queryString = `SELECT strftime('%m/%d/%Y',Date([Date])) as key , strftime('%H:%M', [time]) as [bhtime], substr([Cell_Name],0,9) as [Entity] , ${_chartList.map(config => `${config.formula} AS [${config.name}]`).join(",")} FROM main WHERE ( [Date] between '${startDate}' and  '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:MM:SS")}' ) and [Cell_Name] LIKE '${sites}%' GROUP BY Date([Date]) , substr([Cell_Name],0,9)` 
         
         let db = new Database().query(queryString)
         db.then((response)=>{
@@ -264,14 +267,15 @@ function BhLayer(props){
         }).catch((error)=>{
             console.log(error)
         }).finally(()=>{
+            console.log(`Set querying false`)
             setQuerying(false)
             onDoneRefreshing()
         })
     }
 
     React.useEffect(()=>{
+        console.log(`Receive refreshing signal ${refreshing}`)
         if(refreshing){
-            //console.log(chartList)
             queryFunction(chartList)
         }
     },[refreshing])
@@ -300,12 +304,14 @@ function BhLayer(props){
                 }) => (
                     <Menu {...props} style={{...props.style}} vertical pointing={true}>
                         <Menu.Item name="chart-export" onClick={()=>{
+                            freezeContext.setFreeze(true, 'Exporting...')
                             let db = new Database()
                             console.log(chartsData)
                             db.excelService([
                                 {operation:'chart',highchart:chartsData}
                             ]).then((response)=>{
                                 console.log(response)
+                                freezeContext.setFreeze(false)
                             })
                             setShowMore(false)
                         }}>Export to excel</Menu.Item>
@@ -317,7 +323,7 @@ function BhLayer(props){
                 )}
             </Overlay>
         </div>
-        {charts.length === 0 && !querying && <Segment placeholder style={{height: 'calc( 100vh - 224px )', margin: '10px 0px'}}>
+        {charts.length === 0 && !querying && <Segment placeholder style={{height: 'calc( 100vh - 244px )', margin: '10px 0px'}}>
              <Header icon>
                 <Icon name='chart bar' />
                 Specify start date , end date and sites
@@ -330,7 +336,7 @@ function BhLayer(props){
                 <div>Querying... </div>
             </div>
         </div>}
-        {
+        {charts.length !== 0 &&
             <div style={{height: 'calc( 100vh - 216px )',filter:querying?'blur(1px)':'none'}}>
                 <AutoSizer> 
                     {({ height , width }) => <List height={height} itemCount={charts.length} itemSize={Math.round(height*0.9)} width={width}>

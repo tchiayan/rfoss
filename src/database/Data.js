@@ -2,12 +2,15 @@ import React from 'react';
 import { Database } from '../Database';
 import Highcharts from "highcharts";
 import HighchartsReact from 'highcharts-react-official';
-import { Button , Form , Icon , Menu, Table , Pagination , List } from 'semantic-ui-react';
+import { Button , Form , Icon , Menu, Table , Pagination , List , Segment , Header} from 'semantic-ui-react';
 import { Card , ProgressBar , Overlay , Modal } from 'react-bootstrap';
 import ChartLoading from '../img/chart-loading.gif';
+import SpinnerGif from '../img/spinner-gif.gif';
 import * as moment from 'moment';
 import Excel from 'exceljs';
 import FreezeContext from './../module/FreezeView';
+import { ToastContext } from './../module/ToastContext';
+import AppContext from './../module/AppContext';
 
 function Reset(props){
     const { show , onHide  } = props 
@@ -145,6 +148,7 @@ function Reset(props){
     ]
 
     const [ configuration , setConfiguration ] = React.useState(configs)
+    const [ inOperation , setInOperation ] = React.useState(false)
 
     React.useEffect(()=>{
         return () => {
@@ -164,7 +168,8 @@ function Reset(props){
             </List>
         </Modal.Body>
         <Modal.Footer>
-            <Button primary onClick={async ()=>{
+            <Button primary disabled={inOperation} onClick={async ()=>{
+                setInOperation(true)
                 let db = new Database()
 
                 for(let i = 0 ; i < configuration.length ; i++){
@@ -188,11 +193,13 @@ function Reset(props){
                         return _oldConfig
                     })
                 }
+                setInOperation(false)
             }}>Reset</Button>
-            <Button secondary onClick={()=>onHide()}>Cancel</Button>
+            <Button secondary disabled={inOperation} onClick={()=>onHide()}>Exit</Button>
         </Modal.Footer>
     </Modal>
 }
+
 function ListCell(props){
     const { show , onHide } = props 
     const [ cellList , setCellList ] = React.useState(['Cell 1' , 'Cell 2' , 'Cell 3'])
@@ -314,9 +321,13 @@ function Data(){
     const [ filter , setFilter] = React.useState('')
     const [ isIndex , setIsIndex ] = React.useState(true)
     const freezeContext = React.useContext(FreezeContext)
+    const toastContext = React.useContext(ToastContext)
+    const appContext = React.useContext(AppContext)
+    const [ isQuerying , setIsQuerying ] = React.useState(false)
 
     const queryCellCount = (start , end , filter) => {
-        let query = new Database().query(`SELECT date(Date) as [date], count(Cell_Name) as [cell_count] FROM main WHERE Date >= '${start}' and Date <= '${end}' ${!!filter ? `and Cell_Name LIKE '${filter}%'`: ''}GROUP BY date(Date) ORDER BY Date`)
+        setIsQuerying(true)
+        let query = new Database().query(`SELECT date(Date) as [date], count(Cell_Name) as [cell_count] FROM main WHERE Date >= '${start}' and Date <= '${moment(end).endOf('day').format("YYYY-MM-DD HH:MM:SS")}' ${!!filter ? `and Cell_Name LIKE '${filter}%'`: ''}GROUP BY date(Date) ORDER BY Date`)
         
         return query.then((response)=>{
             if(response.status === 'Ok'){
@@ -350,14 +361,15 @@ function Data(){
             }
         }).catch((err)=>{
             console.log(err.message)
+        }).finally(()=>{
+            setIsQuerying(false)
         })
     }
 
     const removeDuplicated = (start , end) => {
         let db = new Database()
-        freezeContext.setFreeze(true)
-        freezeContext.setFreezeMessage("Deleting duplicate entry...")
-        db.run(`DELETE FROM main WHERE ID NOT IN ( SELECT MIN(ID) FROM main WHERE Date >= '${start}' and Date <= '${end}' GROUP BY [Cell_Name], date([Date])) and Date >= '${start}' and Date <= '${end}'`).then((response)=>{
+        freezeContext.setFreeze(true, "Deleting duplicate entry...")
+        db.run(`DELETE FROM main WHERE ID NOT IN ( SELECT MIN(ID) FROM main WHERE Date >= '${start}' and Date <= '${moment(end).endOf('day').format("YYYY-MM-DD HH:MM:SS")}' GROUP BY [Cell_Name], date([Date])) and Date >= '${start}' and Date <= '${moment(end).endOf('day').format("YYYY-MM-DD HH:MM:SS")}'`).then((response)=>{
             if(response.status === 'Ok'){
                 console.log(response.affectedRows)
             }else{
@@ -369,13 +381,12 @@ function Data(){
             console.log(err.message)
         }).finally(()=>{
             freezeContext.setFreeze(false)
-            freezeContext.setFreezeMessage("")
         })
     }
 
     const deleteData = (start , end ) => {
         let db = new Database()
-        db.run(`DELETE FROM main WHERE Date >= '${start}' and Date <= '${end}'`).then((response)=>{
+        db.run(`DELETE FROM main WHERE Date >= '${start}' and Date <= '${moment(end).endOf('day').format("YYYY-MM-DD HH:MM:SS")}'`).then((response)=>{
             if(response.status === 'Ok'){
                 console.log(response.affectedRows)
             }else{
@@ -426,23 +437,34 @@ function Data(){
         setUploading(false)
     }
     //query cell count 
-    React.useEffect(()=>{
-        queryCellCount(startdate , enddate).then(()=>{
+    const init = () => {
+        let db = new Database()
 
-            //Check project main database is indexing or not
-            let db = new Database()
-
-            db.query(`SELECT type , name , tbl_name, sql FROM sqlite_master WHERE type ='index' and tbl_name = 'main' and name = 'timeobject' `).then((response)=>{
-                if(response.status === 'Ok'){
-                    if(response.result.length === 1){
-                        setIsIndex(true)
-                    }else{
-                        setIsIndex(false)
-                    }
+        db.query(`SELECT type , name , tbl_name, sql FROM sqlite_master WHERE type ='index' and tbl_name = 'main' and name = 'timeobject' `).then((response)=>{
+            if(response.status === 'Ok'){
+                if(response.result.length === 1){
+                    setIsIndex(true)
+                    return true
+                }else{
+                    setIsIndex(false)
+                    return false
                 }
-            })
+            }
+        }).then((isIndexed) => {
+            if(isIndexed){
+                queryCellCount(startdate , enddate)
+            }else{
+                toastContext.setInfo('Database is not optimized.')
+            }
+            
         })
+    }
 
+    React.useEffect(()=>{
+        //Check project main database is indexing or not
+        if(appContext.tables.includes("main")){
+            init()
+        }
     }, [])
 
     return <div style={{marginTop: '10px', height: 'calc(100vh - 110px)', overflowY: 'auto'}}>
@@ -473,11 +495,11 @@ function Data(){
                                         ...props
                                     }) => (
                                         <Menu {...props} style={{...props.style}} vertical pointing={true}>
-                                            <Menu.Item name="export-raw-data" onClick={()=>{
+                                            <Menu.Item name="export-raw-data" disabled={!appContext.tables.includes("main")} onClick={()=>{
                                                 setShowCellList(true)
                                                 setShowMore(false)
                                             }}>List available cells</Menu.Item>
-                                            <Menu.Item name="export-raw-data" onClick={()=>{
+                                            <Menu.Item name="export-raw-data"  disabled={!appContext.tables.includes("main")} onClick={()=>{
                                                 if(filter !== ''){
                                                     exportRawData(startdate , enddate , filter)
                                                 }
@@ -491,20 +513,25 @@ function Data(){
                                             <Menu.Item name="link-database" onClick={()=>{
                                                 let db = new Database()
                                                 db.linkDatabase().then((response)=>{
-                                                  if(response.status === 'Ok'){
-                                                    if(response.result === 'linked'){
-                                                      console.log("re-establish to new db")
-                                                      queryCellCount(startdate, enddate , filter)
+                                                    if(response.status === 'Ok'){
+                                                        if(response.result === 'linked'){
+                                                            appContext.updateTables().then((tables)=>{
+                                                                if(tables.includes("main")){
+                                                                    // reinit the database
+                                                                    init()
+                                                                }
+                                                                //queryCellCount(startdate, enddate , filter)
+                                                            })
+                                                        }
                                                     }
-                                                  }
                                                 })
                                                 setShowMore(false)
                                             }}>Link database</Menu.Item>
-                                            <Menu.Item name="delete-duplicate" onClick={()=>{
+                                            <Menu.Item name="delete-duplicate" disabled={!appContext.tables.includes("main")}  onClick={()=>{
                                                 removeDuplicated(startdate, enddate)
                                                 setShowMore(false)
                                             }}>Delete duplicate</Menu.Item>
-                                            <Menu.Item name="delete-data" onClick={()=>{
+                                            <Menu.Item name="delete-data"  disabled={!appContext.tables.includes("main")} onClick={()=>{
                                                 setConfirm({
                                                     show: true , 
                                                     action: ()=>{console.log('delete');deleteData(startdate, enddate)}, 
@@ -518,9 +545,8 @@ function Data(){
                                             }}>
                                                 Reset configuration
                                             </Menu.Item>
-                                            {!isIndex && <Menu.Item name="optimize-database" onClick={()=>{
-                                                freezeContext.setFreeze(true)
-                                                freezeContext.setFreezeMessage('Creating index profile on database')
+                                            {!isIndex && <Menu.Item name="optimize-database"  disabled={!appContext.tables.includes("main")} onClick={()=>{
+                                                freezeContext.setFreeze(true, 'Creating index profile on database')
                                                 let db = new Database()
                                                 db.update(`CREATE INDEX timeobject ON main (Date COLLATE BINARY, Cell_Name COLLATE NOCASE)`).then((response)=>{
                                                     if(response.status === 'Ok'){
@@ -530,7 +556,6 @@ function Data(){
                                                     }
                                                 }).finally(()=>{
                                                     freezeContext.setFreeze(false)
-                                                    freezeContext.setFreezeMessage('')
                                                 })
                                                 setShowMore(false)
                                             }}>
@@ -544,21 +569,45 @@ function Data(){
                     </Form>
                     
                 
-                {chartProps !== null && <HighchartsReact highcharts={Highcharts} options={chartProps} containerProps={{style:{height:'52vh'}}}/>}
-                {chartProps === null && <div style={{display:'flex', justifyContent: 'center', alignItems: 'center',height:'50vh'}}><img src={ChartLoading} alt="chart-loading" style={{height: '25vh' , width: 'auto'}}/></div>}
+                {appContext.tables.includes("main") && chartProps !== null && <HighchartsReact highcharts={Highcharts} options={chartProps} containerProps={{style:{height:'52vh'}}}/>}
+                {appContext.tables.includes("main") && !isQuerying && chartProps === null && <Segment placeholder style={{display:'flex', justifyContent: 'center', alignItems: 'center',height:'50vh'}}><Header icon>Query to view daily cell count. Filter is optional</Header></Segment>}
+                {appContext.tables.includes("main") && isQuerying && chartProps === null && <div style={{display:'flex', justifyContent: 'center', alignItems: 'center',height:'50vh'}}><img src={SpinnerGif} alt="queryloading" height='24px' width='24px'/></div>}
+                {!appContext.tables.includes("main") && <Segment placeholder style={{height:'52vh'}}>
+                    <Header icon>
+                        No data
+                    </Header>
+                </Segment>}
             </Card.Body>
             <Card.Footer>
                 {!uploading && <Button primary onClick={()=>{
                         let db = new Database();
                         db.upload(
                             'main', 
-                            ()=>{setUploading(true);setProgress(0);setProgressText("Parsing Data")}, 
+                            ()=>{
+                                // on start uploading
+                                //setUploading(true);setProgress(0);setProgressText("Parsing Data")
+                                freezeContext.setFreeze(true , "Parsing data")
+                            }, 
                             (param)=>{
-                                setProgressText("Uploading")
-                                setProgress(Math.round(param.progress*100))
+                                // on uploading
+                                //setProgressText("Uploading")
+                                //setProgress(Math.round(param.progress*100))
+                                freezeContext.setFreeze(true, "Uploading..." , param.progress*100)
                             },
-                            ()=>{setUploading(false);setProgressText("");queryCellCount(startdate, enddate, filter)},
-                            ()=>{setUploading(false);setProgressText("")}
+                            ()=>{
+                                // on loading end
+                                //setUploading(false);setProgressText("");queryCellCount(startdate, enddate, filter)
+                                freezeContext.setFreeze(false)
+                                if(!appContext.tables.includes('main')){
+                                    appContext.updateTables()
+                                }
+                            },
+                            ()=>{
+                                // on uploading error
+                                //setUploading(false);setProgressText("")
+                                freezeContext.setFreeze(false)
+                                toastContext.setError('Error occured when uploading stats')
+                            }
                         )
                     }}>
                         Select file to upload

@@ -3,7 +3,7 @@ const path = require('path')
 const { ipcMain , dialog , app , Menu , BrowserWindow , electron } = require('electron')
 const sqlite3 = require('sqlite3').verbose();
 const { autoUpdater } = require("electron-updater");
-const express = require('express')
+//const express = require('express')
 const machineId = require('node-machine-id').machineId
 
 let mainWindow
@@ -30,7 +30,7 @@ if(fs.existsSync(configFilePath)){
 }
 
 /* Electron */
-function runApp(){
+/*function runApp(){
     if(!isDev){
         console.log('start server')
         const _app = express()
@@ -50,6 +50,10 @@ function runApp(){
         console.log('development detected. load from localhost:3000')
         createWindow()
     }
+}*/
+
+function runApp(){
+    createWindow()
 }
 
 function createWindow() {
@@ -65,7 +69,8 @@ function createWindow() {
 
     // `file://${path.join(__dirname, '../build/index.html')}`
     mainWindow.loadURL(
-        isDev ? 'http://localhost:3000' : 'http://localhost:5151/',
+        //isDev ? 'http://localhost:3000' : 'http://localhost:5151/',
+        isDev ? 'http://localhost:3000' : `file://${path.join(__dirname, '../build/index.html')}`,
     )
 
     mainWindow.on('closed', () => {
@@ -76,9 +81,9 @@ function createWindow() {
     mainWindow.removeMenu()
     mainWindow.setMenu(null)
 
-    mainWindow.webContents.openDevTools({mode:'bottom'})
-    autoUpdater.autoDownload = false
-    autoUpdater.checkForUpdatesAndNotify();
+    //mainWindow.webContents.openDevTools({mode:'bottom'})
+    //autoUpdater.autoDownload = false
+    //autoUpdater.checkForUpdatesAndNotify();
 
     //Testing for update
     //setTimeout(()=>{
@@ -375,7 +380,7 @@ ipcMain.on("whereismydb", ()=>{
 })
 
 // Auto Update
-autoUpdater.on("update-available", ()=>{
+/*autoUpdater.on("update-available", ()=>{
     mainWindow.webContents.send("update_available")
 })
 
@@ -389,4 +394,4 @@ ipcMain.on("download_update",(event)=>{
 
 ipcMain.on("quit_install", ()=>{
     autoUpdater.quitAndInstall()
-})
+})*/

@@ -10,6 +10,7 @@ import * as moment from 'moment';
 import Highcharts from "highcharts";
 import HighchartsCustomEvents from 'highcharts-custom-events';
 import HighchartsReact from 'highcharts-react-official';
+import FreezeContext from '../module/FreezeView';
 
 import { AgGridReact } from '@ag-grid-community/react';
 import {AllCommunityModules} from '@ag-grid-community/all-modules';
@@ -85,6 +86,7 @@ function Ta(props){
     const [ tableData , setTableData ] = React.useState([])
     const [ showTableSetting , setShowTableSetting ] = React.useState(false)
     const [ showChartSetting , setShowChartSetting ] = React.useState(false)
+    const freezeContext = React.useContext(FreezeContext)
     const moreTarget = React.useRef();
 
     const loadColumnsConfig = () => {
@@ -221,6 +223,7 @@ function Ta(props){
                     <Menu {...props} style={{...props.style}} vertical pointing={true}>
                         <Menu.Item name="export" onClick={()=>{
                             if(chartData.length > 0 && tableData.length > 0 ){
+                                freezeContext.setFreeze(true, 'Exporting')
                                 let db = new Database()
                                 db.excelService([
                                     {operation:'write', data: chartData , row: 1, col: 1},
@@ -238,7 +241,9 @@ function Ta(props){
                                     {operation:'format_percentage_bar', position:[[3,5],[tableData.length , tableData[1].length]]},
                                     {operation:'format_percentage', position:[[3,5],[tableData.length , tableData[1].length]]}
                                     
-                                ])
+                                ]).then((response)=>{
+                                    freezeContext.setFreeze(false)
+                                })
                             }
                             setShowMore(false)
                         }}>Export</Menu.Item>

@@ -28,6 +28,10 @@ const updateRegisterListenWhenOnline = ( callback ) => {
                             window.localStorage.setItem("isExpired", true)
                         }
                         callback()
+                    }else{
+                        window.localStorage.removeItem("expired")
+                        window.localStorage.removeItem("project")
+                        window.localStorage.removeItem("isExpired")
                     }
                 })
             }
