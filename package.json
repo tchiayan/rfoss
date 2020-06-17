@@ -1,6 +1,6 @@
 {
   "name": "rf-oss-util",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "main": "public/electron.js",
   "author": {
@@ -78,7 +78,7 @@
   "homepage": ".",
   "build": {
     "appId": "com.electron.rfosstool",
-    "productName":"RF OSS",
+    "productName": "RF OSS",
     "asar": true,
     "files": [
       "!build/upload.exe",
@@ -95,10 +95,12 @@
       }
     ],
     "win": {
-      "publish": [{
-        "provider":"generic",
-        "url":"https://www.mapgit.com"
-      }]
+      "publish": [
+        {
+          "provider": "generic",
+          "url": "https://www.mapgit.com"
+        }
+      ]
     },
     "nsis": {
       "oneClick": false,
