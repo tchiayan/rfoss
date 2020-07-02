@@ -2,7 +2,9 @@ const isDev = require('electron-is-dev')
 const path = require('path')
 const { ipcMain , dialog , app , Menu , BrowserWindow , electron } = require('electron')
 const sqlite3 = require('sqlite3').verbose();
+const moment = require('moment')
 const { autoUpdater } = require("electron-updater");
+const csv = require('csv-parser')
 //const express = require('express')
 const machineId = require('node-machine-id').machineId
 
@@ -82,14 +84,14 @@ function createWindow() {
     mainWindow.setMenu(null)
 
     //mainWindow.webContents.openDevTools({mode:'bottom'})
-    //autoUpdater.autoDownload = false
-    //autoUpdater.checkForUpdatesAndNotify();
+    autoUpdater.autoDownload = false
+    autoUpdater.checkForUpdatesAndNotify();
 
     //Testing for update
     //setTimeout(()=>{
     //    console.log("update_available")
-    //    mainWindow.webContents.send("update-available") 
-    //},4000)
+    //    mainWindow.webContents.send("update_available") 
+    //},10000)
 
 }
 
@@ -163,8 +165,178 @@ ipcMain.on('excel', (event, arg)=>{
     })
 })
 
-ipcMain.on('uploadFileStatus', (event, arg) => {
+ipcMain.on(`uploadFileStatus_csv`, (event,arg) => {
     dialog.showOpenDialog({
+        filters: [
+            //{name: "All Files", extensions: ["*"]},
+            {name: 'CSV',extensions: ['csv']}
+        ],
+        properties: ['openFile']
+    }).then((dialogResult)=>{
+        if(!dialogResult.canceled){
+            let filePaths = dialogResult.filePaths;
+            let rowNum = 1
+            let headerRow = arg.options.uploadingHeader
+            let headerCol = arg.options.alias[arg.tablename]
+            let headerCheck = null
+            let uploadData = []
+
+            event.sender.send('uploadFileStatus_csv_'+arg.session+'_start')
+            fs.createReadStream(filePaths[0])
+                .pipe(csv({
+                    skipLines: headerRow !== 1 ? headerRow : 0, 
+                    //headers: true
+                }))
+                .on('data' , async (row) =>{
+                    if(headerCheck === null){
+                        let configHeader = Object.values(headerCol)
+                        let uploadHeader = Object.keys(row)
+                        let headerContain = configHeader.map(col => uploadHeader.includes(col))
+
+                        headerCheck = !headerContain.includes(false)
+                        console.log(`Upload table match with config header: ${headerCheck}`)
+
+                        if(headerCheck === false){
+                            // print missing header 
+                            console.log(`CSV Header: ${uploadHeader.join(" , ")}`)
+                            console.log(`Missing header: ${configHeader.filter(col => !uploadHeader.includes(col)).join(" , ")}`)
+                            
+                        }
+                    }else if(headerCheck === true){
+                        // Append upload data
+                        uploadData.push(row)
+                    }
+                    rowNum++;
+                })
+                .on('end', async () =>{
+                    console.log('Data loaded. Preparing to upload')
+
+                    let db = new sqlite3.Database(defaultDbPath, async (err) => {
+                        if (err) {
+                            console.error(err.message);
+                        }
+                        console.log('Connected to the core database.');
+                        
+                        if(headerCheck === true){
+                            
+                            await new Promise((resolve, reject)=>{ 
+                                db.all(`SELECT * FROM sqlite_master WHERE type = 'table' and name = '${arg.tablename}'`, (err , row) => {
+                                    if(err){
+                                        reject(new Error("Upload fail. Unable to lookup table.")) 
+                                    }else{
+                                        if(row.length === 0 && uploadData.length > 0){
+                                            // create table
+                                            console.log("Upload table not existed. Creating new table")
+                                            let configHeader = Object.entries(headerCol).map(([key , col]) => {
+                                                let val = uploadData[0][col]
+                                                console.log(`${val} | type [${typeof val}] | is date [${moment(val, "YYYY-MM-DD HH:mm:ss", true).isValid() || moment(val, "MM/DD/YYYY HH:mm", true).isValid()}] [${moment(val, "M/DD/YYYY H:mm", true).isValid()}]`)
+                                                if(val.match(/(?<percentage>\d{1,}\.\d{2})%/,'i')){
+                                                    return [key , 'REAL']
+                                                }else if(!isNaN(val)){
+                                                    return [key , 'REAL']
+                                                }else if(moment(val, "YYYY-MM-DD HH:mm:ss", true).isValid() || moment(val, "M/D/YYYY H:mm", true).isValid()){
+                                                    return [key , 'DATE']
+                                                }else{
+                                                    return [key , 'TEXT']
+                                                }
+                                                
+                                            })
+                                            //console.log(configHeader)
+
+                                            
+                                            return db.exec(`CREATE TABLE ${arg.tablename} ( ID INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL , ${configHeader.map(val => val.join(" ")).join(" , ")} )`, (err)=>{
+                                                if(err){ 
+                                                    console.log(`CREATE TABLE ${arg.tablename} ( ID INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL , ${configHeader.map(val => val.join(" ")).join(" , ")} )`)
+                                                    reject(new Error('Upload fail. Unable to create new table'))
+                                                }else{
+                                                    console.log(`New table created`)
+                                                    resolve(true)
+                                                }
+                                                
+                                            })
+                                        }else{
+                                            resolve(true)
+                                        }
+                                    }
+                                })
+                            }).then(async response => {
+                                if(response){
+                                    // continue to upload data
+                                    console.log(`Continue to upload data. Total upload ${uploadData.length}`)
+                                    let success = 0;
+                                    let error = 0;
+                                    let process = 0;
+                                    let totalCount = uploadData.length
+                                    let batchSize = 100
+                                    let batch = 0
+                                    let uploadBatch = uploadData.slice(batch*batchSize, (batch+1)*batchSize)
+                                    let uploadKey = Object.keys(headerCol)
+                                    let uploadCol = Object.values(headerCol)
+                                    let progress = 0.00
+                                    do{
+                                        let uploadInsert = uploadBatch.map(row => ` (${uploadCol.map(col => {
+                                            let val = row[col]
+                                            if(val.match(/(?<percentage>\d{1,}\.\d{2})%/,'i')){
+                                                return parseFloat(val.match(/(?<percentage>\d{1,}\.\d{2})%/,'i').groups.percentage)
+                                            }else if(!isNaN(val)){
+                                                return parseFloat(val)
+                                            }else if(moment(val, "YYYY-MM-DD HH:mm:ss", true).isValid()){
+                                                return `'${val}'`
+                                            }else if(moment(val, "M/D/YYYY H:mm", true).isValid()){ // After Excel edited csv date format
+                                                return `'${moment(val, "M/D/YYYY H:mm").format('YYYY-MM-DD HH:mm:ss')}'`
+                                            }else{
+                                                return `'${val}'`
+                                            }
+                                        }).join(" , ")} )`)
+
+                                        batch++;
+                                        await db.exec(`INSERT INTO ${arg.tablename} ( ${uploadKey.join(" , ")}) VALUES ${uploadInsert.join(" , ")}`, (err)=>{
+                                            if(err){
+                                                error += uploadInsert.length;
+                                            }else{
+                                                success += uploadInsert.length;
+                                            }
+
+                                            process+= uploadInsert.length
+                                            if(parseFloat((process/totalCount).toFixed(2)) != progress){
+                                                progress = parseFloat((process/totalCount).toFixed(2))
+                                                //console.log(`Progress : ${progress} [uploadFileStatus_csv_${arg.session}_counter]`)
+                                                event.sender.send(`uploadFileStatus_csv_${arg.session}_counter`, {progress:progress})
+                                                if(progress == 1){
+                                                    console.log(`Upload done`)
+                                                    event.sender.send(`uploadFileStatus_csv_${arg.session}`)
+                                                }
+                                            }
+                                        })
+
+                                        uploadBatch = uploadData.slice(batch*batchSize, (batch+1)*batchSize)
+                                    }while(uploadBatch.length > 0)
+
+                                    uploadData = null;
+                                    //event.sender.send(`uploadFileStatus_csv_${arg.session}`)
+                                }
+                            }).catch((err)=>{
+                                console.log(err.message)
+                            })
+                        }else{
+                            console.log(`Upload file header not matched`)
+                            event.sender.send(`uploadFileStatus_csv_${arg.session}_error`)
+                        }
+                        
+                    })
+                })
+            
+            
+        }
+    })
+})
+
+ipcMain.on('uploadFileStatus_excel', (event, arg) => {
+    dialog.showOpenDialog({
+        filters: [{
+            name: 'Excel',
+            extensions: ['xlsx']
+        }],
         properties: ['openFile']
     }).then((dialogResult)=>{
         if(!dialogResult.canceled){
@@ -175,7 +347,7 @@ ipcMain.on('uploadFileStatus', (event, arg) => {
             //const script = isDev ?  `${__dirname}/upload.exe` : `${__dirname}/../../app.asar.unpacked/upload.exe`
             const scriptArgv = ['upload', defaultDbPath ,arg.tablename, filePaths[0]]
             
-            event.sender.send('uploadFileStatus_'+arg.session+'_start')
+            event.sender.send('uploadFileStatus_excel_'+arg.session+'_start')
             console.log("Run command: " , script, scriptArgv.join(" "))
             let process = isDev ? spawn('python', [script , ...scriptArgv]) : spawn(script, scriptArgv)
             spawnProcess.push(process)
@@ -188,7 +360,7 @@ ipcMain.on('uploadFileStatus', (event, arg) => {
                 let readData = (bufferData + data.toString().slice(0,lastIndexOf+1)).match(/{.*?}/g)
                 if(readData){
                     let data_json = JSON.parse(readData[readData.length - 1])
-                    event.sender.send('uploadFileStatus_'+arg.session+'_counter', data_json)
+                    event.sender.send('uploadFileStatus_excel_'+arg.session+'_counter', data_json)
                 }
                 bufferData = data.toString().slice(lastIndexOf+1)
             })
@@ -208,13 +380,13 @@ ipcMain.on('uploadFileStatus', (event, arg) => {
                     console.log("upload stats finish")
                     spawnProcess.splice(spawnProcess.indexOf(process,1))
                     //send dbase_tablename_ready
-                    event.sender.send(`dbase_${arg.tablename}_ready`)
-                    event.sender.send(`uploadFileStatus_${arg.session}`)
+                    //event.sender.send(`dbase_${arg.tablename}_ready`)
+                    event.sender.send(`uploadFileStatus_excel_${arg.session}`)
                 }else{
                     // prompt error
                     console.log("Error while importing stats into database")
                     console.log(errorBuffer)
-                    event.sender.send(`dbase_${arg.tablename}_error`)
+                    event.sender.send(`uploadFileStatus_excel_${arg.tablename}_error`)
                     spawnProcess.splice(spawnProcess.indexOf(process,1))
                 }
             })
@@ -380,7 +552,7 @@ ipcMain.on("whereismydb", ()=>{
 })
 
 // Auto Update
-/*autoUpdater.on("update-available", ()=>{
+autoUpdater.on("update-available", ()=>{
     mainWindow.webContents.send("update_available")
 })
 
@@ -394,4 +566,4 @@ ipcMain.on("download_update",(event)=>{
 
 ipcMain.on("quit_install", ()=>{
     autoUpdater.quitAndInstall()
-})*/
+})

@@ -143,9 +143,24 @@ function Reporting(props){
         <div style={{display: 'flex', alignItems: 'center'}}>
             <Form style={{flexGrow:1}}>
                 <Form.Group widths="equal">
-                    <Form.Input size="small" type='date' label="Start date" max={endDate} value={startDate} onChange={(e,{value})=>setStartDate(value)} />
-                    <Form.Input size="small" type='date' label="End date" min={startDate} value={endDate} onChange={(e,{value})=>setEndDate(value)} />
-                    <Form.Input defaultValue="sedu" size="small" type='text' label="Site" placeholder="Enter sites/cell" onBlur={(e)=>setSites(e.target.value)}/> 
+                    <Form.Input size="small" type='date' label="Start date" max={endDate} defaultValue={startDate} onBlur={(e)=>setStartDate(e.target.value)} onKeyUp={(e)=>{
+                        if(e.keyCode === 13){
+                            e.target.blur()
+                            setRefreshing(true)
+                        }
+                    }}/>
+                    <Form.Input size="small" type='date' label="End date" min={startDate} defaultValue={endDate} onBlur={(e)=>setEndDate(e.target.value)} onKeyUp={(e)=>{
+                        if(e.keyCode === 13){
+                            e.target.blur()
+                            setRefreshing(true)
+                        }
+                    }}/>
+                    <Form.Input defaultValue="sedu" size="small" type='text' label="Site" placeholder="Enter sites/cell" onBlur={(e)=>setSites(e.target.value)} onKeyUp={(e)=>{
+                        if(e.keyCode === 13){
+                            e.target.blur()
+                            setRefreshing(true)
+                        }
+                    }}/> 
                 </Form.Group>
             </Form>
             <div style={{marginLeft: '10px'}}><Button disabled={querying} onClick={()=>{setRefreshing(true);console.log(`set refreshing true`)}}>Refresh</Button></div>

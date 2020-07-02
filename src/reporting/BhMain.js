@@ -6,6 +6,8 @@ import { Database } from '../Database';
 import SettingModal from '../module/SettingModal';
 import { pivot } from '../module/Function';
 import FreezeContext from '../module/FreezeView';
+import AppContext from '../module/AppContext';
+
 import * as moment from 'moment'
 import Highcharts from "highcharts";
 import HighchartsCustomEvents from 'highcharts-custom-events';
@@ -75,6 +77,7 @@ function BhMain(props){
     const [ chartSetting , setChartSetting ] = React.useState(false)
     const [ showMore , setShowMore ] = React.useState(false)
     const freezeContext = React.useContext(FreezeContext)
+    const appContext = React.useContext(AppContext)
     const moreTarget = React.useRef(null)
 
     const loadChartConfig = () => {
@@ -93,7 +96,7 @@ function BhMain(props){
 
     const queryFunction = (_chartList) => {
         setQuerying(true)
-        let queryString = `SELECT strftime('%m/%d/%Y',Date([Date])) as key , strftime('%H:%M', [time]) as [bhtime], substr([Cell_Name],0,9) as [Entity] , ${_chartList.map(config => `${config.formula} AS [${config.name}]`).join(",")} FROM main WHERE ([Date] between '${startDate}' and '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:MM:SS")}') and [Cell_Name] LIKE '${sites}%' GROUP BY Date([Date]) , substr([Cell_Name],0,9)` 
+        let queryString = `SELECT strftime('%m/%d/%Y',Date([Date])) as key , strftime('%H:%M', [time]) as [bhtime], ${appContext.celllevel}  as [Entity] , ${_chartList.map(config => `${config.formula} AS [${config.name}]`).join(",")} FROM main WHERE ([Date] between '${startDate}' and '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:mm:ss")}') and [Cell_Name] LIKE '${sites}%' GROUP BY Date([Date]) , ${appContext.celllevel} ` 
         let db = new Database().query(queryString)
         db.then((response)=>{
             if(response.status === 'Ok'){
@@ -166,7 +169,10 @@ function BhMain(props){
                                 let bhtime = response.result.find(row => row.Entity === name && row.key === date) ? response.result.find(row => row.Entity === name && row.key === date).bhtime : "No data"
                                 return "<em>" + date + "</em><br />" + name + ":<b>" + value + "</b><br />BH Hour: <b>" + bhtime + "</b>" ;
                             }
-                        }
+                        },
+                        credits: {
+                            enabled: false
+                        },
                     }
                 })
 
@@ -243,10 +249,9 @@ function BhMain(props){
                 <Icon name='chart bar' />
                 Specify start date , end date and sites
             </Header>
-        
         </Segment>}
-        {charts.length > 0 && <div style={{height:'calc( 100vh - 216px )',display:'flex', flexFlow: 'row wrap', justifyContent: 'space-evenly',filter:querying?'blur(1px)':'none', overflowY:'auto'}}>
-            {charts.map((chart,id) => <HighchartsReact key={id} highcharts={Highcharts} options={chart} containerProps={{style:{height:'calc( 90vh - 196px )', flexShrink: 0, flexBasis: '50%'}}}/>)}
+        {charts.length > 0 && <div style={{height:'calc( 100vh - 224px )',display:'flex', flexFlow: 'row wrap', justifyContent: 'space-evenly',filter:querying?'blur(1px)':'none', overflowY:'auto'}}>
+            {charts.map((chart,id) => <HighchartsReact key={id} highcharts={Highcharts} options={chart} containerProps={{style:{height:'340px', flexShrink: 0, flexBasis: '50%'}}}/>)}
         </div>}
         <ChartConfigModal show={chartConfig.show} onHide={()=>{
             setChartConfig({show: false , min:null , max: null , chartId: null, axis: 0})

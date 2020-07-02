@@ -47,6 +47,14 @@ class Database {
         })
     }
 
+    downloadUpdate(){
+        this.ipcRenderer.send("download_update")
+    }
+    
+    quitAndInstall(){
+        this.ipcRenderer.send("quit_install")
+    }
+
     async query(queryString){
         const session = Math.random().toString(16).slice(2)
 
@@ -207,28 +215,31 @@ class Database {
         })
     }
 
-    upload(tablename, onUploadingStart, onUploadingCallback , onFinishCallback, onUploadError){
+    upload(tablename, uploadingFormat ,  onUploadingStart, onUploadingCallback , onFinishCallback, onUploadError, options){
         const session = Math.random().toString(16).slice(2)
-        this.ipcRenderer.send("uploadFileStatus",{session: session, tablename:tablename})
+        this.ipcRenderer.send(`uploadFileStatus_${uploadingFormat}`,{session: session, tablename:tablename, options:options})
 
         const listener = (event, arg)=>{
+            //console.log(arg)
             onUploadingCallback(arg) // {"update_count":number}
         }   
 
-        this.ipcRenderer.once("uploadFileStatus_"+session+"_start", ()=>{
+        this.ipcRenderer.once(`uploadFileStatus_${uploadingFormat}_${session}_start`, ()=>{
             onUploadingStart()
-            this.ipcRenderer.on("uploadFileStatus_"+session+"_counter", listener)
+            console.log(`uploadFileStatus_${uploadingFormat}_${session}_counter`)
+            this.ipcRenderer.on(`uploadFileStatus_${uploadingFormat}_${session}_counter`, listener)
         })
 
-        this.ipcRenderer.once("uploadFileStatus_"+session, (event, arg)=>{
+        this.ipcRenderer.once(`uploadFileStatus_${uploadingFormat}_${session}`, (event, arg)=>{
             // remove counter listener
-            this.ipcRenderer.removeListener("uploadFileStatus_"+session+"_counter", listener)
+            this.ipcRenderer.removeListener(`uploadFileStatus_${uploadingFormat}_${session}_counter`, listener)
             onFinishCallback()
         })
 
-        this.ipcRenderer.once("uploadFileStatus_"+session+"_error", ()=>{
+        this.ipcRenderer.once(`uploadFileStatus_${uploadingFormat}_${session}_error`, ()=>{
             // remove counter listener
-            this.ipcRenderer.removeListener("uploadFileStatus_"+session+"_counter", listener)
+            console.log(`Error detected`)
+            this.ipcRenderer.removeListener(`uploadFileStatus_${uploadingFormat}_${session}_counter`, listener)
             onUploadError()
         })
     }

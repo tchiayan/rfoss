@@ -11,6 +11,7 @@ import { FixedSizeList as List } from 'react-window';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { pivot } from '../module/Function';
 import FreezeContext from '../module/FreezeView';
+import AppContext from '../module/AppContext';
 
 import Highcharts from "highcharts";
 import HighchartsCustomEvents from 'highcharts-custom-events';
@@ -72,6 +73,7 @@ function ChartConfigModal(props){
     </Modal>
 }
 
+
 function BhLayer(props){
     const { startDate , endDate , sites , querying, setQuerying , refreshing , onDoneRefreshing} = props 
     const [ chartList , setChartList ] = React.useState([])
@@ -79,8 +81,10 @@ function BhLayer(props){
     const [ chartsData , setChartsData ] = React.useState([])
     const [ chartConfig , setChartConfig ] = React.useState({show: false, min: null , max: null , id: null, axis: 0})
     const [ chartSetting , setChartSetting ] = React.useState(false)
+    const [ chartGroupBy , setChartGroupBy ] = React.useState('sector')
     const [ showMore , setShowMore ] = React.useState(false)
     const freezeContext = React.useContext(FreezeContext)
+    const appContext = React.useContext(AppContext)
     const moreTarget = React.useRef();
 
     const loadChartConfig = () => {
@@ -97,10 +101,10 @@ function BhLayer(props){
         })
     }
 
-    const queryFunction = (_chartList) => {
+    const queryFunction = (_chartList , groupby = chartGroupBy) => {
         console.log(`Query chart`)
         setQuerying(true)
-        let queryString = `SELECT strftime('%m/%d/%Y',Date([Date])) as key , strftime('%H:%M', [time]) as [bhtime], substr([Cell_Name],0,9) as [Entity] , ${_chartList.map(config => `${config.formula} AS [${config.name}]`).join(",")} FROM main WHERE ( [Date] between '${startDate}' and  '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:MM:SS")}' ) and [Cell_Name] LIKE '${sites}%' GROUP BY Date([Date]) , substr([Cell_Name],0,9)` 
+        let queryString = `SELECT strftime('%m/%d/%Y',Date([Date])) as key , strftime('%H:%M', [time]) as [bhtime], ${appContext.celllevel} as [Entity] , ${_chartList.map(config => `${config.formula} AS [${config.name}]`).join(",")} FROM main WHERE ( [Date] between '${startDate}' and  '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:mm:ss")}' ) and [Cell_Name] LIKE '${sites}%' GROUP BY Date([Date]) , ${appContext.celllevel}` 
         
         let db = new Database().query(queryString)
         db.then((response)=>{
@@ -129,7 +133,7 @@ function BhLayer(props){
                     return group
                 },{})
 
-                let charts = Object.values(sectors).map(rows => {
+                let charts = groupby === 'sector' ? Object.values(sectors).map(rows => {
                     let groupSectorChart = _chartList.map(chartProps => {
                         let table = pivot(rows, dateRange , "Entity", chartProps.name)
                         let chartid = Math.random().toString('26').slice(2)
@@ -182,7 +186,75 @@ function BhLayer(props){
                                 series: {
                                     animation: false
                                 }
-                            }
+                            },
+                            credits: {
+                                enabled: false
+                            },
+                        }
+                    })
+
+                    return {
+                        chartOptions: groupSectorChart
+                    }
+
+                    
+                }) : _chartList.map(chartProps => {
+                    let groupSectorChart = Object.values(sectors).map(rows => {
+                        let table = pivot(rows, dateRange , "Entity", chartProps.name)
+                        let chartid = Math.random().toString('26').slice(2)
+                        return {
+                            id: chartid, 
+                            chart:{
+                                type:'line',
+                                animation: false,
+                                //backgroundColor: '#edf0f2',
+                                plotBackgroundColor: '#f5f5f5' //'#edf0f2' , //'#FCFFC5'
+                            },
+                            title:{
+                              text: chartProps.title, 
+                            },
+                            yAxis: [
+                                {
+                                    min: 0, 
+                                    events:{
+                                        click: () => {console.log('hahaha')}
+                                    },
+                                    labels:{
+                                        events: {
+                                            dblclick: function (e) {
+                                                //console.log(this)
+                                                let min = this.axis.min
+                                                let max = this.axis.max
+                                                setChartConfig({show: true , min: min , max: max , chartId: chartid, axis: 0})
+                                                //console.log('hehehe')
+                                            }
+                                        }
+                                    }
+                                }
+                            ],
+                            xAxis: {
+                              categories: table.slice(1).map(row => row[0])
+                            },
+                            series:table[0].slice(1).map((entity , i) =>{
+                              return {name: entity, data:table.slice(1).map(row => row[i+1])}
+                            }),
+                            tooltip:{
+                                formatter: function(){
+                                    let date = this.x // string 
+                                    let value = this.y // value 
+                                    let name = this.series.name
+                                    let bhtime = response.result.find(row => row.Entity === name && row.key === date) ? response.result.find(row => row.Entity === name && row.key === date).bhtime : "No data"
+                                    return "<em>" + date + "</em><br />" + name + ":<b>" + value + "</b><br />BH Hour: <b>" + bhtime + "</b>" ;
+                                }
+                            },
+                            plotOptions: {
+                                series: {
+                                    animation: false
+                                }
+                            },
+                            credits: {
+                                enabled: false
+                            },
                         }
                     })
 
@@ -230,7 +302,10 @@ function BhLayer(props){
                             },
                             series:table[0].slice(1).map((entity , i) =>{
                               return {name: entity, data:table.slice(1).map(row => row[i+1])}//.map(value => value === null ? "" : value)}
-                            })
+                            }),
+                            credits: {
+                                enabled: false
+                            },
                         }
                     })
 
@@ -241,7 +316,26 @@ function BhLayer(props){
                     
                 })
 
+                console.log(charts)
                 setChartsData(exportCharts.map(chart => chart.chartOptions))
+                console.log(charts.map(chart => chart.chartOptions.reduce((list, _c)=>{
+                    if(list.length === 0){
+                        list.push({section:true,data:[_c]})
+                    }else{
+                        if(list[list.length-1].data.length === 2){
+                            list.push({section:false,data:[_c]})
+                        }else{
+                            list[list.length-1].data.push(_c)
+                        }
+                    }
+                    
+                    //if(list[list.length-1].length === 2){
+                    //    list.push([_c])
+                    //}else{
+                    //    list[list.length-1].push(_c)
+                    //}
+                    return list
+                },[])).flatMap(_chart => _chart))
                 setCharts(charts.map(chart => chart.chartOptions.reduce((list, _c)=>{
                     if(list.length === 0){
                         list.push({section:true,data:[_c]})
@@ -319,6 +413,14 @@ function BhLayer(props){
                             setChartSetting(true)
                             setShowMore(false)
                         }}>Chart setting</Menu.Item>
+
+                        <Menu.Item name="chart-setting" onClick={()=>{
+                            //setChartSetting(true)
+                            let nextGroup = chartGroupBy === 'KPI' ? 'sector' : 'KPI'
+                            setChartGroupBy(nextGroup)
+                            queryFunction(chartList , nextGroup)
+                            setShowMore(false)
+                        }}>{`Group chart by same ${chartGroupBy === 'KPI' ? 'sector' : 'KPI'}`}</Menu.Item>
                     </Menu>
                 )}
             </Overlay>
@@ -337,9 +439,9 @@ function BhLayer(props){
             </div>
         </div>}
         {charts.length !== 0 &&
-            <div style={{height: 'calc( 100vh - 216px )',filter:querying?'blur(1px)':'none'}}>
+            <div style={{height: 'calc( 100vh - 224px )',filter:querying?'blur(1px)':'none'}}>
                 <AutoSizer> 
-                    {({ height , width }) => <List height={height} itemCount={charts.length} itemSize={Math.round(height*0.9)} width={width}>
+                    {({ height , width }) => <List height={height} itemCount={charts.length} itemSize={/*Math.round(height*0.9)*/340} width={width}>
                         {({index, style})=>{
                             return <div style={{...style , display: 'flex',justifyContent:'center',borderTop:charts[index].section && index !== 0?'1px solid #d0d0d0':'none'}}>
                                 {charts[index].data.map((_c,_ci) => <HighchartsReact key={_ci} highcharts={Highcharts} options={_c} containerProps={{style:{flexBasis:'50%'}}}/>)}

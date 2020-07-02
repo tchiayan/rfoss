@@ -3,6 +3,8 @@ import { Database } from '../Database';
 import { Message , Table, Icon, Button, Pagination, Form, Checkbox} from 'semantic-ui-react'; 
 import { Modal } from 'react-bootstrap';
 
+import AppContext from './../module/AppContext';
+
 function AddNewColumn(props){
     const { show , onHide } = props
     const [ error , setError ] = React.useState(null)
@@ -70,9 +72,10 @@ function Column(){
     const [ columns , setColumns ] = React.useState([])
     const [ filtering , setFiltering ] = React.useState('')
     const [ showAddColumnModal , setAddColumnModal ] = React.useState(false)
+    const appContext = React.useContext(AppContext)
 
-    const loadColumns = () => {
-        let subsription = new Database().query(`SELECT name , type FROM pragma_table_info("main")`)
+    const loadColumns = (table) => {
+        let subsription = new Database().query(`SELECT name , type FROM pragma_table_info("${table}")`)
         
         subsription.then((res)=>{
             if(res.status === 'Ok'){
@@ -86,7 +89,9 @@ function Column(){
     }
     // Subscribe for all available columns
     React.useEffect(()=>{
-        loadColumns()
+        if(appContext.selectedTable !== null){
+          loadColumns(appContext.selectedTable)
+        }   
 
         return () => {
             setError(null)
@@ -95,6 +100,9 @@ function Column(){
 
     return <div style={{overflowY:'auto', maxHeight:'calc( 100vh - 132px )', margin: '10px 0px'}}>
         <div style={{display:'flex'}}>
+            <Form>
+                <Form.Select selection placeholder="Select table" onChange={(e,{value})=>{appContext.setSelectedTable(value);loadColumns(value)}} value={appContext.selectedTable} options={appContext.main.filter(table => appContext.tables.includes(table)).map(table => ({key:table,value:table,text:table}))}/>
+            </Form>
             <div style={{flexGrow:1}}></div>
             <Form style={{margin:'0px 10px'}}>
                 <Form.Input placeholder="Search column" type="text" style={{width:'200px'}} value={filtering} onChange={(e,{value})=>setFiltering(value)} />
@@ -127,7 +135,7 @@ function Column(){
             <Table.Footer fullWidth>
                 <Table.Row>
                     <Table.HeaderCell colSpan="2">
-                        <Button floated="left" primary onClick={()=>setAddColumnModal(true)}>Add new column</Button>
+                        <Button floated="left" primary onClick={()=>setAddColumnModal(true)} disabled={true}>Add new column</Button>
                         <Button floated="left" color="red" disabled={true}>Delete column</Button>
                         <Pagination floated="right" activePage={activePage+1} onPageChange={(e,{activePage})=>setActivePage(activePage-1)} 
                             totalPages={Math.floor(columns.filter(col => {

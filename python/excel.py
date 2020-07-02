@@ -137,7 +137,9 @@ def addChart(worksheet , highchart, positionX=0, positionY=0 , width = 500 , hei
         #print(["" if x == None else x for x in series['data']])
         seriesObj.Values = "={"+",".join(["#N/A" if x == None else str(x) for x in series['data']]) + "}"
         seriesObj.ChartType = 65
-
+        if 'excelLineWidth' in series:
+            seriesObj.Format.Line.Weight = series['excelLineWidth']
+        
         if "marker" in series:
             if series['marker']:
                 seriesObj.ChartType = 4
@@ -149,6 +151,13 @@ def addChart(worksheet , highchart, positionX=0, positionY=0 , width = 500 , hei
         if "color" in series:
             seriesObj.Format.Line.ForeColor.RGB = 255 # red
 
+    if "yAxis" in highchart:
+        if len(highchart['yAxis']) == 1:
+            if "labels" in highchart['yAxis'][0]:
+                if "formatting" in highchart['yAxis'][0]["labels"]:
+                    if  highchart['yAxis'][0]["labels"]["formatting"] == "percentage":
+                        yaxis = chart.Chart.Axes(2)
+                        yaxis.TickLabels.NumberFormat = "0.00%"
     if "xAxis" in highchart:
         if "categories" in highchart['xAxis']:
             axis = chart.Chart.Axes(1 , 1)
@@ -209,7 +218,7 @@ try:
                 groupingRowGap = 50
                 chartXgap = 5
                 chartYgap = 5 
-                currentX = 0
+                currentX = step['x'] if 'x' in step else 0 
                 currentY = 0
                 itemX = 1
                 if len(a.shape) == 2 : #two dimension chart 
@@ -224,7 +233,7 @@ try:
                                 itemX += 1
                             elif itemX == 2:
                                 addChart(worksheet, chart, currentX , currentY)
-                                currentX = 0
+                                currentX = step['x'] if 'x' in step else 0 
                                 currentY = currentY + chartYgap + 230
                                 itemX = 1
 
@@ -233,28 +242,60 @@ try:
                         if len(chartidgroup) > 1:
                             worksheet.Shapes.Range(chartidgroup).Group()
                         currentY = currentY + groupingRowGap + 230
-                        currentX = 0
+                        currentX = step['x'] if 'x' in step else 0 
                         itemX = 1
                     
                 elif len(a.shape) == 1: #one dimension chart 
-                    for chart in step['highchart']:
-                        if itemX == 1:
-                            if chart == step['highchart'][-1]:
-                                addChart(worksheet, chart, (500*2+5)/2 - 500/2 , currentY)
-                            else:
-                                addChart(worksheet, chart, currentX , currentY)
-                            currentX = currentX + chartXgap + 500
-                            itemX += 1
-                        elif itemX == 2:
-                            addChart(worksheet, chart, currentX , currentY)
-                            currentX = 0
-                            currentY = currentY + chartYgap + 230
-                            itemX = 1
-
-                    # group chart 
-                    chartidgroup = [chart['id'] for chart in step['highchart']]
-                    worksheet.Shapes.Range(chartidgroup).Group()
-
+                    chartwidth = step['width']  if 'width' in step else 500
+                    chartheight = step['height'] if 'height' in step else 230 
+                    if 'column' in step:
+                        if step['column'] == 1:
+                            for chart in step['highchart']:
+                                addChart(worksheet, chart, currentX , currentY, chartwidth, chartheight)
+                                currentX = step['x'] if 'x' in step else 0 
+                                currentY = currentY + chartYgap + chartheight
+                            # group chart 
+                            chartidgroup = [chart['id'] for chart in step['highchart']]
+                            if len(chartidgroup) > 1:
+                                worksheet.Shapes.Range(chartidgroup).Group()
+                        else:
+                            for chart in step['highchart']:
+                                
+                                if itemX == 1:
+                                    if chart == step['highchart'][-1]:
+                                        addChart(worksheet, chart, (chartwidth*2+5)/2 - chartwidth/2 , currentY , chartwidth, chartheight)
+                                    else:
+                                        addChart(worksheet, chart, currentX , currentY, chartwidth, chartheight)
+                                    currentX = currentX + chartXgap + chartwidth
+                                    itemX += 1
+                                elif itemX == 2:
+                                    addChart(worksheet, chart, currentX , currentY, chartwidth, chartheight)
+                                    currentX = step['x'] if 'x' in step else 0 
+                                    currentY = currentY + chartYgap + chartheight
+                                    itemX = 1
+                            # group chart 
+                            chartidgroup = [chart['id'] for chart in step['highchart']]
+                            if len(chartidgroup) > 1:
+                                worksheet.Shapes.Range(chartidgroup).Group()
+                    else:
+                        for chart in step['highchart']:
+                                
+                            if itemX == 1:
+                                if chart == step['highchart'][-1]:
+                                    addChart(worksheet, chart, (chartwidth*2+5)/2 - chartwidth/2 , currentY , chartwidth, chartheight)
+                                else:
+                                    addChart(worksheet, chart, currentX , currentY, chartwidth, chartheight)
+                                currentX = currentX + chartXgap + chartwidth
+                                itemX += 1
+                            elif itemX == 2:
+                                addChart(worksheet, chart, currentX , currentY, chartwidth, chartheight)
+                                currentX = step['x'] if 'x' in step else 0 
+                                currentY = currentY + chartYgap + chartheight
+                                itemX = 1
+                        # group chart 
+                        chartidgroup = [chart['id'] for chart in step['highchart']]
+                        if len(chartidgroup) > 1:
+                            worksheet.Shapes.Range(chartidgroup).Group()
 finally:    
     excel.Visible = True
 

@@ -18,6 +18,7 @@
     "@material-ui/icons": "^4.5.1",
     "@material-ui/lab": "^4.0.0-alpha.55",
     "bootstrap": "^4.3.1",
+    "csv-parser": "^2.3.3",
     "electron-is-dev": "^1.1.0",
     "electron-updater": "^4.2.0",
     "exceljs": "^3.4.0",
@@ -26,7 +27,7 @@
     "highcharts": "^7.2.1",
     "highcharts-custom-events": "^3.0.4",
     "highcharts-react-official": "^3.0.0",
-    "moment": "^2.24.0",
+    "moment": "^2.27.0",
     "nan": "^2.14.0",
     "node-machine-id": "^1.1.12",
     "react": "^16.12.0",
@@ -98,7 +99,7 @@
       "publish": [
         {
           "provider": "generic",
-          "url": "https://www.mapgit.com"
+          "url": "https://storage.googleapis.com/rfoss"
         }
       ]
     },

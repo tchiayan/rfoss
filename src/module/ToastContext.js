@@ -9,7 +9,7 @@ const ToastProvider = ToastContext.Provider
 function ErrorModal(props){
     const { open , onClose , message } = props
     return <Snackbar open={open} autoHideDuration={6000} onClose={onClose} anchorOrigin={{vertical:'bottom',horizontal:'right'}}>
-        <Alert onClose={onClose} severity="error">
+        <Alert onClose={onClose} variat="filled" severity="error">
             {message}
         </Alert>
     </Snackbar> 
@@ -18,7 +18,7 @@ function ErrorModal(props){
 function InfoModal(props){
     const { open , onClose , message } = props
     return <Snackbar open={open} autoHideDuration={6000} onClose={onClose} anchorOrigin={{vertical:'bottom',horizontal:'right'}}>
-        <Alert onClose={onClose} severity="info">
+        <Alert onClose={onClose} variant="filled" severity="info">
             {message}
         </Alert>
     </Snackbar> 

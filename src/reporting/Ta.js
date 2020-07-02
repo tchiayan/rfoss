@@ -11,6 +11,7 @@ import Highcharts from "highcharts";
 import HighchartsCustomEvents from 'highcharts-custom-events';
 import HighchartsReact from 'highcharts-react-official';
 import FreezeContext from '../module/FreezeView';
+import AppContext from '../module/AppContext';
 
 import { AgGridReact } from '@ag-grid-community/react';
 import {AllCommunityModules} from '@ag-grid-community/all-modules';
@@ -86,6 +87,7 @@ function Ta(props){
     const [ tableData , setTableData ] = React.useState([])
     const [ showTableSetting , setShowTableSetting ] = React.useState(false)
     const [ showChartSetting , setShowChartSetting ] = React.useState(false)
+    const appContext = React.useContext(AppContext)
     const freezeContext = React.useContext(FreezeContext)
     const moreTarget = React.useRef();
 
@@ -114,7 +116,7 @@ function Ta(props){
     }
 
     const queryColumnFunction = (columns) => {
-        let queryString = `SELECT strftime('%m/%d/%Y',Date([Date])) as [Date] , [eNodeB_Name] as [eNodeB Name] , [Cell_FDD_TDD_Indication] as [Cell FDD TDD Indication] , substr([Cell_Name],0,9) as [Cell Name] , ${columns.map(config => `${config.formula} AS [${config.title}]`).join(",")} FROM main WHERE [Date] >= '${endDate}' and  [Date] < '${moment(endDate).clone().add(1,'days').format("YYYY-MM-DD")}' and [Cell_Name] LIKE '${sites}%' GROUP BY Date([Date]) , substr([Cell_Name],0,9)` 
+        let queryString = `SELECT strftime('%m/%d/%Y',Date([Date])) as [Date] , [eNodeB_Name] as [eNodeB Name] , [Cell_FDD_TDD_Indication] as [Cell FDD TDD Indication] , ${appContext.celllevel}  as [Cell Name] , ${columns.map(config => `${config.formula} AS [${config.title}]`).join(",")} FROM main WHERE [Date] >= '${endDate}' and  [Date] < '${moment(endDate).clone().add(1,'days').format("YYYY-MM-DD")}' and [Cell_Name] LIKE '${sites}%' GROUP BY Date([Date]) , ${appContext.celllevel} ` 
         let db = new Database().query(queryString)
         return db.then((response)=>{
             if(response.status === 'Ok'){
@@ -136,7 +138,7 @@ function Ta(props){
     }
 
     const queryChartFunction = (series) => {
-        let queryString = `SELECT strftime('%m/%d/%Y',Date([Date])) as [Date] , substr([Cell_Name],0,9) as [Cell Name] , ${series.map(config => `${config.formula} AS [${config.title}]`).join(",")} FROM main WHERE  [Date] >= '${endDate}' and  [Date] < '${moment(endDate).clone().add(1,'days').format("YYYY-MM-DD")}'  and [Cell_Name] LIKE '${sites}%' GROUP BY Date([Date]) , substr([Cell_Name],0,9)` 
+        let queryString = `SELECT strftime('%m/%d/%Y',Date([Date])) as [Date] , ${appContext.celllevel}  as [Cell Name] , ${series.map(config => `${config.formula} AS [${config.title}]`).join(",")} FROM main WHERE  [Date] >= '${endDate}' and  [Date] < '${moment(endDate).clone().add(1,'days').format("YYYY-MM-DD")}'  and [Cell_Name] LIKE '${sites}%' GROUP BY Date([Date]) , ${appContext.celllevel} ` 
         let db = new Database()
         return db.query(queryString).then((response)=>{
             if(response.status === 'Ok'){
@@ -165,7 +167,10 @@ function Ta(props){
                         align: 'right',
                         verticalAlign: 'middle',
                         layout: 'vertical'
-                    }
+                    },
+                    credits: {
+                        enabled: false
+                    },
                 })
             }else{
                 throw Error("Unable to query result")
@@ -259,7 +264,7 @@ function Ta(props){
                 )}
             </Overlay>
         </div>
-        <div style={{height: 'calc( 100vh - 216px )' , display: 'flex'}}>
+        <div style={{height: 'calc( 100vh - 224px )' , display: 'flex'}}>
             {(startDate === null || endDate === null || sites === "") && <Segment placeholder style={{height: 'calc( 100% - 20px)', margin: '10px 0px'}}>
                 <Header icon>
                     <Icon name='chart bar' />

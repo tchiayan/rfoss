@@ -25,6 +25,8 @@ function SettingModal(props){
             }else{
                 throw Error("Unable to get setting")
             }
+        }).catch((error) => {
+            console.log(`Unable to query table : ${tableQuery}`)
         })
     }
 

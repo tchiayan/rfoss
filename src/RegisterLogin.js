@@ -16,7 +16,7 @@ const updateRegisterListenWhenOnline = ( callback ) => {
         connectedRef.on("value", (snapshot)=>{
             if (snapshot.val() === true){
                 console.log('Application go online')
-                firebase.database().ref(`license/${id}`).once('value').then((snapshot)=>{
+                firebase.database().ref(`license/${id}`).once('value').then(async (snapshot)=>{
                     if(snapshot.val() !== null){
                         console.log('Update local license')
                         const { email , project , expired } = snapshot.val()
@@ -27,7 +27,63 @@ const updateRegisterListenWhenOnline = ( callback ) => {
                         }else{
                             window.localStorage.setItem("isExpired", true)
                         }
-                        callback()
+
+                        let _setting = {}
+                        if(!!project){
+                            console.log(`Get lastest project setting [${project}] from online`)
+                            _setting = await firebase.database().ref(`projectSetting/${project}`).once('value').then((snapshot)=>{
+                                if(snapshot.val()){
+                                    let setting = {
+                                        main: undefined,
+                                        uploadingFormat: undefined, 
+                                        useAliasColumn: undefined, 
+                                        date: undefined, 
+                                        object: undefined, 
+                                        alias: undefined, 
+                                        sitelevel: undefined, 
+                                        celllevel: undefined, 
+                                        sectorlevel: undefined,
+                                    }
+                                    Object.assign(setting , snapshot.val())
+                                    
+                                    /*window.localStorage.setItem("main", JSON.stringify(main))
+                                    window.localStorage.setItem("uploadingFormat", uploadingFormat)
+                                    window.localStorage.setItem("uploadingHeader", uploadingHeader)
+                                    window.localStorage.setItem("useAliasColumn", useAliasColumn)
+                                    window.localStorage.setItem("date", date)
+                                    window.localStorage.setItem("object", object)
+                                    if(alias === undefined) {
+                                        window.localStorage.removeItem("alias")
+                                    }else{
+                                        window.localStorage.setItem("alias", JSON.stringify(alias))
+                                    }
+                                    window.localStorage.setItem("sitelevel", sitelevel)
+                                    window.localStorage.setItem("celllevel", celllevel)
+                                    window.localStorage.setItem("sectorlevel", sectorlevel)*/
+
+                                    Object.entries(setting).forEach(([field , value]) => {
+                                        if(typeof value === 'object'){
+                                            window.localStorage.setItem(field , JSON.stringify(value))
+                                        }else if(typeof value === 'undefined'){
+                                            window.localStorage.removeItem(field)
+                                        }else{
+                                            window.localStorage.setItem(field , value)
+                                        }
+                                    })
+
+                                    return setting
+                                }
+                            })
+                        }
+
+                        console.log(_setting)
+                        callback({
+                            ..._setting,
+                            project: project,
+                            email: email, 
+                            expired: expired
+
+                        })
                     }else{
                         window.localStorage.removeItem("expired")
                         window.localStorage.removeItem("project")

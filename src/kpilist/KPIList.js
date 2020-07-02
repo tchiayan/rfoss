@@ -3,6 +3,7 @@ import React from 'react';
 import { Database } from '../Database';
 import { Table , Pagination, Form, Icon, Message, Button} from 'semantic-ui-react';
 import { Modal } from 'react-bootstrap';
+import AppContext from './../module/AppContext';
 
 const aggregationMethod = ['avg' , 'sum']
 
@@ -13,11 +14,12 @@ function EditFormula(props){
     const [ counters , setCounters ] = React.useState([])
     const [ formulaCorrect , setFormulaCorrect ] = React.useState(false);
     const [ nameCorrect , setNameCorrect ] = React.useState('Name is empty')
+    const appContext = React.useContext(AppContext)
 
     const verifyFomula = (_formula, _columns) => {
         let removeAgg = _formula; 
         _columns.forEach(col => {
-            let regex = RegExp(`(${aggregationMethod.join("|")})\\(\\s*${col}\\s*\\)`,'g')
+            let regex = RegExp(`(${aggregationMethod.join("|")})\\(\\s*${col.counter}\\s*\\)`,'g')
             removeAgg = removeAgg.replace(regex , "1")
         })
 
@@ -30,7 +32,9 @@ function EditFormula(props){
     }
 
     React.useEffect(()=>{
+        // console.log(columns)
         if(show && !!name && !!formula && !!columns){
+            
             setEditName(name)
             if(name.trim() === ''){
                 setNameCorrect("Name is empty")
@@ -41,7 +45,7 @@ function EditFormula(props){
             }
 
             setEditFormula(formula)
-            setCounters(columns.filter(col => formula.match(col)))
+            setCounters(columns.filter(col => formula.match(col.counter)).map(col => col.counter))
             verifyFomula(formula, columns)
         }
 
@@ -80,7 +84,8 @@ function EditFormula(props){
                 <Form.Group widths="equal">
                     <Form.TextArea rows={3} label="Formula" type="text" placeholder="Enter formula" value={editFormula} onChange={(e, {value})=>{
                         setEditFormula(value)
-                        setCounters(columns.filter(col => value.match(col)))
+                        console.log(columns.filter(col => value.match(col.counter)).map(col => col.counter))
+                        setCounters(columns.filter(col => value.match(col.counter)).map(col => col.counter))
 
                         // verify the formula
                         verifyFomula(value , columns)
@@ -88,20 +93,48 @@ function EditFormula(props){
                 </Form.Group>
                 {formulaCorrect && <Message success header='Formula correct' />}
                 {!formulaCorrect && <Message error header='Formula incorrect' />}
-                <Form.Select selection multiple value={counters} options={counters.map(counter => ({key:counter,value:counter,text:counter}))} />
+                <Form.Select label="Counter" selection multiple search value={counters} options={columns.map(counter => ({key:counter.counter,value:counter.counter,text:counter.counter, tablename:counter.tablename}))} onChange={(e,{value, tablename})=>{
+                    console.log(tablename)
+                    value.forEach(val => {
+                        if(!counters.includes(val)){
+                            setEditFormula(editFormula + ` ${val}`)
+                        }
+                    })
+
+                    setCounters(value)
+                }}/>
+                <Form.Select label="Table" selection disabled multiple 
+                    value={Array.from(new Set(columns.filter(col => counters.includes(col.counter)).map(col => col.tablename)))}
+                    options={appContext.main.filter(table => appContext.tables.includes(table)).map(table => ({key:table,value:table,text:table}))}
+                />
             </Form>
         </Modal.Body>
         <Modal.Footer>
                 <Button primary disabled={nameCorrect !== null || !formulaCorrect} onClick={()=>{
-                    let db = new Database()
-                    db.update(`UPDATE formulas SET name = '${editName}' , formula = '${editFormula}' WHERE ID = ${id}`).then((response)=>{
-                        if(response.status === 'Ok'){
-                            refresh()
-                            onHide()
-                        }else{
-                            console.log("Error when update formula")
-                        }
-                    })
+                    let dependancyTables = Array.from(new Set(columns.filter(col => counters.includes(col.counter)).map(col => col.tablename)))
+
+                    if(id === null){
+                        let db = new Database()
+                        db.update(`INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ('${editName}' , '${editFormula}' , '${dependancyTables.join(";")}' , ${dependancyTables.length > 1 ? 0 : 1} )`).then((response)=>{
+                            if(response.status === 'Ok'){
+                                refresh()
+                                onHide()
+                            }else{
+                                console.log("Error when update formula")
+                            }
+                        })
+                    }else{
+                        let db = new Database()
+                        db.update(`UPDATE formulas SET name = '${editName}' , formula = '${editFormula}' , tablename = '${dependancyTables.join(";")}' , singletable = ${dependancyTables.length > 1 ? 0 : 1} WHERE ID = ${id}`).then((response)=>{
+                            if(response.status === 'Ok'){
+                                refresh()
+                                onHide()
+                            }else{
+                                console.log("Error when update formula")
+                            }
+                        })
+                    }
+                    
                 }}>{id === null ? 'Create' : 'Save'} </Button>
         </Modal.Footer>
     </Modal>
@@ -120,23 +153,30 @@ function KPIList(props){
         id: null, 
         names: []
     })
+    const appContext = React.useContext(AppContext)
+
     const itemPerPage = 10
     React.useEffect(()=>{
         setTitle(title)
     }, [title])
 
-    const loadColumns = () => {
-        let subsription = new Database().query(`SELECT name , type FROM pragma_table_info("main")`)
-        
-        subsription.then((res)=>{
-            if(res.status === 'Ok'){
-                setColumns(res.result.map(entry => entry.name))
-            }else{
-                throw Error('Unable to load data columns')
+    const loadColumns = async () => {
+        let queries = appContext.main.filter(table => appContext.tables.includes(table)).map(table => {
+            return {
+                table: table, 
+                command: `SELECT name , type FROM pragma_table_info("${table}")`
             }
-        }).catch((error)=>{
-            console.log(error.message)
         })
+        let _columns = []
+        for(let i=0,q;q=queries[i];i++){
+            let query = await new Database().query(q.command)
+            if(query.status === 'Ok'){
+                _columns.push(...query.result.filter(entry => entry.name !== 'ID' && entry.name !== appContext.objectDate.object && entry.name !== appContext.objectDate.date).map(entry => ({counter:entry.name, tablename:q.table})))
+            }
+
+        }
+
+        setColumns(_columns)
     }
 
     const loadFormula = () => {
@@ -155,7 +195,7 @@ function KPIList(props){
     React.useEffect(()=>{
         loadColumns()
         loadFormula()
-    },[])
+    },[appContext.tables])
 
     return <div style={{height:'calc( 100vh - 78px )', overflowY: 'auto'}}>
         <div style={{display: 'flex'}}>
