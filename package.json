@@ -81,9 +81,8 @@
     "appId": "com.electron.rfosstool",
     "productName": "RF OSS",
     "asar": true,
-    "files": [
-      "!build/upload.exe",
-      "!build/excel.exe"
+    "files":[
+      "**/*","build/icon.*", "!build/upload.exe", "!build/excel.exe"
     ],
     "extraResources": [
       {

@@ -553,11 +553,17 @@ ipcMain.on("whereismydb", ()=>{
 
 // Auto Update
 autoUpdater.on("update-available", ()=>{
-    mainWindow.webContents.send("update_available")
+    setTimeout(()=>{
+        mainWindow.webContents.send("update_available")
+    }, [ 10000 ])
+    
 })
 
 autoUpdater.on("update-downloaded", ()=>{
-    mainWindow.webContents.send("update_downloaded")
+    setTimeout(()=>{
+        mainWindow.webContents.send("update_downloaded")
+    }, [ 10000 ])
+    
 })
 
 ipcMain.on("download_update",(event)=>{
