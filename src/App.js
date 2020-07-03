@@ -250,9 +250,9 @@ function App(){
               {tables.includes("formulas") && <Menu.Item as={Link} to="/kpilist" onClick={()=>setSidebarVisible(false)}>
                 KPI List
               </Menu.Item>}
-              <Menu.Item as={Link} to="/reporting" onClick={()=>setSidebarVisible(false)}>
+              {tables.includes("formulas") && <Menu.Item as={Link} to="/reporting" onClick={()=>setSidebarVisible(false)}>
                 Reporting
-              </Menu.Item>
+              </Menu.Item>}
             </Sidebar>
             <Sidebar.Pusher dimmed={sidebarVisible}>
               <ToastProvider value={{setError:setErrorMessage, setInfo:setInfoMessage}}>

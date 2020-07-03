@@ -85,6 +85,7 @@ function createWindow() {
 
     //mainWindow.webContents.openDevTools({mode:'bottom'})
     autoUpdater.autoDownload = false
+    autoUpdater.setFeedURL('https://storage.googleapis.com/rfoss/')
     autoUpdater.checkForUpdatesAndNotify();
 
     //Testing for update

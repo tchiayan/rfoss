@@ -67,9 +67,10 @@ function Reset(props){
                 'DROP TABLE IF EXISTS antennaswap3g',
                 'DROP TABLE IF EXISTS antennaswap4g', 
                 'DROP TABLE IF EXISTS antennaswapblended',
+                'DROP TABLE IF EXISTS antennaswapblendeddata',
                 'DROP TABLE IF EXISTS ta2gchart',
                 'DROP TABLE IF EXISTS ta3gchart',
-                'DROP TABLE IF EXISTS ta4gchart'
+                'DROP TABLE IF EXISTS ta4gchart', 
             ], status: 'none'
         },{
             operation: 'Create default KPI list', commands: [
@@ -85,6 +86,7 @@ function Reset(props){
                 `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'LTE_Intra_HOSR'  , 'avg(IntraInter_HOSR)' , 'RAW4G' , 1)`,
                 `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'LTE_UL_PDCP_SDU_Loss_Rate'  , 'sum(UL_PDCP_SDU_LossRate)' , 'RAW4G' , 1)`,
                 `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'LTE_Max_RRC_Connected_User'  , 'sum(Max_RRC_Connected_User)' , 'RAW4G' , 1)`,
+                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'LTE_DL_Traffic_Gb' , 'sum(LTE_DL_Traffic_MByte)/1000' , 'RAW4G', 1)`
                 /*`INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'Number_of_TA0' , 'sum(Number_of_TA0)' , 'TA2G' , 1 )`,
                 `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'Number_of_TA1' , 'sum(Number_of_TA1)' , 'TA2G' , 1 )`,
                 `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'Number_of_TA2' , 'sum(Number_of_TA2)' , 'TA2G' , 1 )`,
@@ -132,10 +134,13 @@ function Reset(props){
                 `INSERT INTO antennaswap4g ( title , formulaid , grouplevel, formatting ) VALUES ('Intra HO SR' , (SELECT ID FROM formulas where name='LTE_Intra_HOSR') , 'cell', 'general')`,
                 `INSERT INTO antennaswap4g ( title , formulaid , grouplevel, formatting ) VALUES ('UL PDCP SDU Loss Rate' , (SELECT ID FROM formulas where name='LTE_UL_PDCP_SDU_Loss_Rate') , 'cell', 'general')`,
                 `INSERT INTO antennaswap4g ( title , formulaid , grouplevel, formatting ) VALUES ('Maximum RRC-Connected User Number' , (SELECT ID FROM formulas where name='LTE_Max_RRC_Connected_User') , 'site', 'general')`,
+                `INSERT INTO antennaswap4g ( title , formulaid , grouplevel, formatting ) VALUES ('DL Data Traffic' , (SELECT ID FROM formulas where name='LTE_DL_Traffic_Gb') , 'cell', 'general')`,
                 `CREATE TABLE antennaswapblended ( ID INTEGER PRIMARY KEY AUTOINCREMENT , title TEXT , formulaid INTEGER , FOREIGN KEY (formulaid) REFERENCES formulas(ID))`,
                 `INSERT INTO antennaswapblended ( title , formulaid ) VALUES ( 'Blended 2G + 3G Voice Traffic (Erl)' , (SELECT ID FROM formulas WHERE name = 'Blended_Voice_Traffic' ))`,
                 `INSERT INTO antennaswapblended ( title , formulaid ) VALUES ( '2G Voice Traffic' , (SELECT ID FROM formulas WHERE name = 'GSM_Traffic_Cell' ))`,
                 `INSERT INTO antennaswapblended ( title , formulaid ) VALUES ( '3G Voice Traffic' , (SELECT ID FROM formulas WHERE name = 'UMTS_Traffic' ))`,
+                `CREATE TABLE antennaswapblendeddata ( ID INTEGER PRIMARY KEY AUTOINCREMENT , title TEXT , formulaid INTEGER , FOREIGN KEY (formulaid) REFERENCES formulas(ID))`,
+                `INSERT INTO antennaswapblendeddata ( title , formulaid) VALUES ('4G DL Data Traffic (GB)' , (SELECT ID FROM formulas where name='LTE_DL_Traffic_Gb'))`,
             ], status: 'none'
         }, /*{
             operation: 'Create TA chart' , commands : [

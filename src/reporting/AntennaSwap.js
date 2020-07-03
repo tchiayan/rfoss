@@ -20,6 +20,7 @@ const dependancyTable = [
     'antennaswap3g', 
     'antennaswap4g',
     'antennaswapblended',
+    'antennaswapblendeddata'
     //'ta2gchart',
     //'ta3gchart',
     //'ta4gchart',

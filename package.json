@@ -82,8 +82,6 @@
     "productName": "RF OSS",
     "asar": true,
     "files": [
-      "**/*",
-      "build/icon.*",
       "!build/upload.exe",
       "!build/excel.exe"
     ],
@@ -101,7 +99,7 @@
       "publish": [
         {
           "provider": "generic",
-          "url": "https://storage.googleapis.com/rfoss"
+          "url": "https://storage.googleapis.com/rfoss/"
         }
       ]
     },

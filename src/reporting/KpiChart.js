@@ -26,15 +26,18 @@ function KPIChart(props){
     const [ chart3GProps , set3GChartProps ] = React.useState([])
     const [ chart4GProps , set4GChartProps ] = React.useState({})
     const [ chartBlendedProps , setBlendedChartProps ] = React.useState([])
+    const [ chartBlendedDataProps , setBlendedDataChartProps ] = React.useState([])
     const [ showMore , setShowMore ] = React.useState(false)
     const [ chart2GSetting , setChart2GSetting ] = React.useState(false) // setting modal
     const [ chart3GSetting , setChart3GSetting ] = React.useState(false) // setting modal
     const [ chart4GSetting , setChart4GSetting ] = React.useState(false) // setting modal
     const [ chartBlendedSetting , setChartBlendedSetting ] = React.useState(false) // setting modal
+    const [ chartBlendedDataSetting , setChartBlendedDataSetting ] = React.useState(false)
     const [ chart2GList , setChart2GList ] = React.useState([]) // chart setting list
     const [ chart3GList , setChart3GList ] = React.useState([]) // chart setting list 
     const [ chart4GList , setChart4GList ] = React.useState([]) // chart setting list
     const [ chartBlendedList , setChartBlendedList ] = React.useState(null) // chart setting list
+    const [ chartBlendedDataList , setChartBlendedDataList ] = React.useState(null)
     const [ chart2GConfig , setChart2GConfig ] = React.useState({show: false, min: null , max: null , chartId: null, save: null})
     const [ chart3GConfig , setChart3GConfig ] = React.useState({show: false, min: null , max: null , chartId: null, save: null})
     const [ chart4GConfig , setChart4GConfig ] = React.useState({show: false, min: null , max: null , chartId: null, save: null})
@@ -89,6 +92,69 @@ function KPIChart(props){
 
     const loadBlendedChartConfig = () => {
         let query = db.query(`SELECT antennaswapblended.ID , antennaswapblended.title  , antennaswapblended.formulaid , formulas.name , formulas.formula , formulas.tablename FROM antennaswapblended LEFT JOIN formulas ON antennaswapblended.formulaid = formulas.ID`)
+        return query.then(async (response)=>{
+            if(response.status === 'Ok'){
+                let blendedSetting = response.result
+                let rawcounter = []
+                blendedSetting.forEach(setting  => {
+                    let regex = RegExp(`(${aggregationMethod.join("|")})\\((?<counter>\\w+)\\)`, 'g')
+                    rawcounter.push(...Array.from(setting.formula.matchAll(regex)).map(matched => ({counter:matched.groups.counter, tablename:setting.tablename})))
+                })
+
+                // refactor combined tablename
+                loop1:
+                for(let i = 0 ; i < rawcounter.length ; i++){
+                    if(rawcounter[i].tablename.split(";").length > 1){
+                        let possibleTable = rawcounter[i].tablename.split(";")
+                        for(let j=0; j < possibleTable.length; j++){
+                            let tableCheck = await db.query(`SELECT name FROM pragma_table_info("${possibleTable[j]}") WHERE name = '${rawcounter[i].counter}'`)
+                            if(tableCheck.status === 'Ok'){
+                                if(tableCheck.result.length > 0){
+                                    //console.log(`raw counter ${rawcounter[i].counter} is belong to ${possibleTable[j]}`)
+                                    rawcounter[i].tablename = possibleTable[j]
+                                    continue loop1
+                                }
+                            }
+                        }
+                    }
+                }
+                let basequery = rawcounter.reduce((group , counterInfo) => {
+                    if(!Object.keys(group).includes(counterInfo.tablename)){
+                        group[counterInfo.tablename] = [counterInfo.counter]
+                    }else if(!group[counterInfo.tablename].includes(counterInfo.counter)){
+                        group[counterInfo.tablename].push(counterInfo.counter)
+                    }
+                    return group
+                }, {})
+                
+                let baseCommand = Object.entries(basequery).reduce((command ,[table , counters] , index) => {
+                    return command + `${command!==''? ' JOIN' : ''} ( SELECT ${appContext.objectDate.date} , ${counters.map(counter => `sum(${counter}) as [${counter}]`).join(",")}  FROM ${table} WHERE ( [${appContext.objectDate.date}] between '${startDate}' and  '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:mm:ss")}' )  and ( ${sites.split(";").map(site => `${appContext.objectDate.object} LIKE '${site}%'`).join(" or ")} ) GROUP BY ${appContext.objectDate.date} ) table${index+1} ${command!==''? `ON table${index}.${appContext.objectDate.date} = table${index+1}.${appContext.objectDate.date}`: ''} `
+                }, "")
+
+                setChartBlendedList({
+                    series: blendedSetting, 
+                    basequery: basequery, 
+                    queryCommand: `SELECT table1.${appContext.objectDate.date} , ${blendedSetting.map(setting => `${setting.formula} as [${setting.title}]`).join(" , ")} FROM ${baseCommand} GROUP BY table1.${appContext.objectDate.date}`, 
+                    baseCommand: baseCommand
+                })
+
+                return {
+                    series: blendedSetting, 
+                    basequery: basequery, 
+                    queryCommand: `SELECT table1.${appContext.objectDate.date} , ${blendedSetting.map(setting => `${setting.formula} as [${setting.title}]`).join(" , ")} FROM ${baseCommand} GROUP BY table1.${appContext.objectDate.date}`, 
+                    baseCommand: baseCommand
+                }
+
+            }else{
+                throw Error("Unable to load chart configuration")
+            }
+        }).catch((err)=>{
+            console.log(err)
+        })
+    }
+
+    const loadBlendedDataChartConfig = () => {
+        let query = db.query(`SELECT antennaswapblendeddata.ID , antennaswapblendeddata.title  , antennaswapblendeddata.formulaid , formulas.name , formulas.formula , formulas.tablename FROM antennaswapblendeddata LEFT JOIN formulas ON antennaswapblendeddata.formulaid = formulas.ID`)
         return query.then(async (response)=>{
             if(response.status === 'Ok'){
                 let blendedSetting = response.result
@@ -264,12 +330,14 @@ function KPIChart(props){
             5: 'L09',
             7: 'L21'
         }
+
         for(let i=0; i < _chartlist.length ; i++){
-            let query = await db.query(`SELECT ${appContext.objectDate.date} as date , ${_chartlist[i].grouplevel === 'site' ? appContext.sitelevel : _chartlist[i].grouplevel === 'sector' ? appContext.sectorlevel : appContext.celllevel}  as object , ${_chartlist[i].formula} as ${_chartlist[i].name} FROM ${_chartlist[i].tablename} WHERE ( [${appContext.objectDate.date}] between '${startDate}' and  '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:mm:ss")}' ) and ( ${sites.split(";").map(site => `${appContext.objectDate.object} LIKE '${site}%'`).join(" or ")} ) GROUP BY ${appContext.objectDate.date} ,  ${_chartlist[i].grouplevel === 'site' ? appContext.sitelevel : _chartlist[i].grouplevel === 'sector' ? appContext.sectorlevel : appContext.celllevel} `)
+            let query = await db.query(`SELECT ${appContext.objectDate.date} as date , ${appContext.celllevel}  as object , ${_chartlist[i].formula} as ${_chartlist[i].name} FROM ${_chartlist[i].tablename} WHERE ( [${appContext.objectDate.date}] between '${startDate}' and  '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:mm:ss")}' ) and ( ${sites.split(";").map(site => `${appContext.objectDate.object} LIKE '${site}%'`).join(" or ")} ) GROUP BY ${appContext.objectDate.date} ,  ${appContext.celllevel} `)
             //console.log(`SELECT ${appContext.objectDate.date} as date , ${_chartlist[i].grouplevel === 'site' ? appContext.sitelevel : _chartlist[i].grouplevel === 'sector' ? appContext.sectorlevel : appContext.celllevel}  as object , ${_chartlist[i].formula} as ${_chartlist[i].name} FROM ${_chartlist[i].tablename} WHERE ( [${appContext.objectDate.date}] between '${startDate}' and  '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:mm:ss")}' ) and ( ${sites.split(";").map(site => `${appContext.objectDate.object} LIKE '${site}%'`).join(" or ")} ) GROUP BY ${_chartlist[i].grouplevel === 'site' ? appContext.sitelevel : _chartlist[i].grouplevel === 'sector' ? appContext.sectorlevel : appContext.celllevel} `)
             //console.log(query)
             //console.log(_chartlist[i])
             if(query.status === 'Ok'){
+                
                 let layers = query.result.reduce((group, row) => {
                     let matching = row.object.match(/\d{4}\w\_?\d?-\w{2}(\d)[\d|\w]/)
                     //console.log(row.Entity.match(/\w{6}_(\w{2})/))
@@ -287,7 +355,14 @@ function KPIChart(props){
                 Object.entries(layers).forEach(([layer , data]) => {
                     let properLayer = layerDefinition[layer]
 
-                    let datatable = pivot(data , 'date', 'object', _chartlist[i].name , [] , (format) => {
+                    let objectModifiedData = data.map(row => {
+                        if(_chartlist[i].grouplevel === 'site'){
+                            row['object'] = row['object'].split("-")[0]
+                        }
+                        return row
+                    })
+
+                    let datatable = pivot(objectModifiedData , 'date', 'object', _chartlist[i].name , [] , (format) => {
                         return moment(format, 'YYYY-MM-DD HH:mm:ss').format("YYYY-MM-DD")
                     })
 
@@ -393,11 +468,64 @@ function KPIChart(props){
         //set2GChartProps(_chartProps)
     }
 
+    const queryBlendedDataChart = async (_chartlist) => {
+        let _chartProps = []
+        console.log(_chartlist.queryCommand)
+        let query = await db.query(_chartlist.queryCommand)
+        //console.log(`SELECT ${appContext.objectDate.date} as date , ${_chartlist[i].grouplevel === 'site' ? appContext.sitelevel : _chartlist[i].grouplevel === 'sector' ? appContext.sectorlevel : appContext.celllevel}  as object , ${_chartlist[i].formula} as ${_chartlist[i].name} FROM ${_chartlist[i].tablename} WHERE ( [${appContext.objectDate.date}] between '${startDate}' and  '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:mm:ss")}' ) and ( ${sites.split(";").map(site => `${appContext.objectDate.object} LIKE '${site}%'`).join(" or ")} ) GROUP BY ${_chartlist[i].grouplevel === 'site' ? appContext.sitelevel : _chartlist[i].grouplevel === 'sector' ? appContext.sectorlevel : appContext.celllevel} `)
+        //console.log(query)
+        
+        if(query.status === 'Ok'){
+            //console.log(query.result)
+            
+            let key = "date"
+            let cat = _chartlist.series.map(series => series.title)
+
+            let datatable = pivot(query.result , "date", cat, null , [], (format) => {
+                return moment(format, 'YYYY-MM-DD HH:mm:ss').format("YYYY-MM-DD")
+            })
+
+            let id = Math.random().toString('26').slice(2)
+            let chartProp = chart(datatable , 'Total DL Data Traffic (GB) ', 'line' , {
+                chartid: id,
+                excelLineWidth: 2.25,
+                primaryAxisEvent: {
+                    dblclick: function(e) {
+                        let min = this.axis.min 
+                        let max = this.axis.max 
+                        setChartBlendedConfig({
+                            show: true , 
+                            min: min , 
+                            max: max , 
+                            chartId: id , 
+                            save: (chartId , minValue , maxValue , chartlist) => {
+                                let _chartList = chartlist.slice()
+                                let _chart = _chartList.find(chart => chart.id === chartId)
+                                //console.log(_chartList)
+                                if(_chart){
+                                    console.log(`Saving chart [${chartId}] from`)
+                                    console.log(_chartList)
+                                    _chart.yAxis[0]['min'] = minValue
+                                    _chart.yAxis[0]['max'] = maxValue
+                                    setBlendedChartProps(_chartList)
+                                }
+                            }
+                        })
+                    }
+                }
+            })
+            console.log(chartProp)
+            _chartProps.push(chartProp)
+        }
+
+        return _chartProps
+    }
     React.useEffect(()=>{
         load2GChartConfig()
             .then(() => load3GChartConfig())
             .then(() => load4GChartConfig())
             .then(() => loadBlendedChartConfig())
+            .then(() => loadBlendedDataChartConfig())
     },[])
 
     return <div style={{height:'calc( 100vh - 97px )'}}>
@@ -420,6 +548,9 @@ function KPIChart(props){
                 let _chartBlendedList = await loadBlendedChartConfig()
                 let chartBlended = await queryBlendedChart(_chartBlendedList)
                 setBlendedChartProps(chartBlended)
+                let _chartBlendedDataList = await loadBlendedDataChartConfig()
+                let chartBlendedData = await queryBlendedDataChart(_chartBlendedDataList)
+                setBlendedDataChartProps(chartBlendedData)
                 freezeContext.setFreeze(false)
             }}>Query</Button></div>
             <div ref={moreTarget} style={{padding: '6px', cursor: 'pointer'}} onClick={()=>setShowMore(true)}>
@@ -450,7 +581,11 @@ function KPIChart(props){
                         <Menu.Item name="chart-blended-setting" onClick={()=>{
                             setChartBlendedSetting(true)
                             setShowMore(false)
-                        }}>Blended Chart setting</Menu.Item>
+                        }}>Blended Voice Chart setting</Menu.Item>
+                        <Menu.Item name="chart-blended-setting" onClick={()=>{
+                            setChartBlendedDataSetting(true)
+                            setShowMore(false)
+                        }}>Blended Data Chart setting</Menu.Item>
                         <Menu.Item name="export-report" onClick={()=>{
                             console.log("Export report")
                             freezeContext.setFreeze(true, 'Exporting...')
@@ -503,8 +638,12 @@ function KPIChart(props){
                 })*/}
             
             <div style={{flexGrow:1,flexShrink:0,flexBasis:'33%'}}>
-                <div style={{backgroundColor:'#75c55b', color:'white', padding: '5px 0px', margin:'0px 20px', textAlign:'center'}}>Blended Traffic</div>
+                <div style={{backgroundColor:'#75c55b', color:'white', padding: '5px 0px', margin:'0px 20px', textAlign:'center'}}>Blended Voice Traffic</div>
                 {chartBlendedProps.length > 0 && chartBlendedProps.map((_chartProp, _chartInd)=>{
+                    return <HighchartsReact key={_chartInd} highcharts={Highcharts} options={_chartProp} containerProps={{style:{height:'300px'}}}/>
+                })}
+                <div style={{backgroundColor:'#75c55b', color:'white', padding: '5px 0px', margin:'0px 20px', textAlign:'center'}}>Blended Data Traffic</div>
+                {chartBlendedDataProps.length > 0 && chartBlendedDataProps.map((_chartProp, _chartInd)=>{
                     return <HighchartsReact key={_chartInd} highcharts={Highcharts} options={_chartProp} containerProps={{style:{height:'300px'}}}/>
                 })}
             </div>
@@ -655,6 +794,36 @@ function KPIChart(props){
                 }).then((chartBlended) => setBlendedChartProps(chartBlended))
             }}
         />
+        <SettingModal 
+            show={chartBlendedDataSetting} 
+            table={'antennaswapblendeddata'}
+            tableQuery={'SELECT antennaswapblendeddata.ID , antennaswapblendeddata.title  , antennaswapblendeddata.formulaid , formulas.name , formulas.tablename FROM antennaswapblendeddata LEFT JOIN formulas ON antennaswapblendeddata.formulaid = formulas.ID'}
+            inserNewQuery={`INSERT INTO antennaswapblendeddata ( title  ) VALUES ( 'New series title'  )`}
+            additionQuery={{formulas:"SELECT ID , name , tablename from formulas"}}
+            tableColumns={[{
+                header:'Series Title',
+                field: 'title',
+                edit: true,
+                editType: 'text', 
+            } , {
+                header: 'KPI',
+                field: 'name',
+                edit: true, 
+                editType: 'selection',
+                editSelection: 'formulas', 
+                key: 'ID', // Key for selection option
+                value: 'formulaid', // map key in selection option to base query column
+                text: 'name',// display text in selection option, 
+            }]}
+            onHide={()=>setChartBlendedDataSetting(false)} 
+            refreshing={()=>{
+                console.log('reapply to chart')
+                loadBlendedDataChartConfig().then((_chartlist)=>{
+                    return queryBlendedDataChart(_chartlist)
+                }).then((chartBlended) => setBlendedDataChartProps(chartBlended))
+            }}
+        />
+
         <ChartConfigModal show={chart2GConfig.show} onHide={()=>{
             setChart2GConfig({show: false , min:null , max: null , chartId: null, save: null })
         }} min={chart2GConfig.min} max={chart2GConfig.max} chartId={chart2GConfig.chartId} save={chart2GConfig.save} chartlist={chart2GProps} />
