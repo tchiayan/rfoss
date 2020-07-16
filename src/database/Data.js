@@ -2,8 +2,8 @@ import React from 'react';
 import { Database } from '../Database';
 import Highcharts from "highcharts";
 import HighchartsReact from 'highcharts-react-official';
-import { Button , Form , Icon , Menu, Table , Pagination , List , Segment , Header} from 'semantic-ui-react';
-import { Card , ProgressBar , Overlay , Modal } from 'react-bootstrap';
+import { Button , Form , Icon , Menu, Table , Pagination , List , Segment , Header , Loader} from 'semantic-ui-react';
+import { Card  , Overlay , Modal } from 'react-bootstrap';
 //import ChartLoading from '../img/chart-loading.gif';
 import SpinnerGif from '../img/spinner-gif.gif';
 import * as moment from 'moment';
@@ -817,7 +817,7 @@ function Data(){
                     
                 {appContext.main.filter(table => appContext.tables.includes(table)).length > 0 && chartProps !== null && <HighchartsReact highcharts={Highcharts} options={chartProps} containerProps={{style:{height:'52vh'}}}/>}
                 {appContext.main.filter(table => appContext.tables.includes(table)).length > 0 && !isQuerying && chartProps === null && <Segment placeholder style={{display:'flex', justifyContent: 'center', alignItems: 'center',height:'50vh'}}><Header icon>Query to view daily cell count. Filter is optional</Header></Segment>}
-                {appContext.main.filter(table => appContext.tables.includes(table)).length > 0 && isQuerying && chartProps === null && <div style={{display:'flex', justifyContent: 'center', alignItems: 'center',height:'50vh'}}><img src={SpinnerGif} width="24px" height="24px"/></div>}
+                {appContext.main.filter(table => appContext.tables.includes(table)).length > 0 && isQuerying && chartProps === null && <div style={{display:'flex', justifyContent: 'center', alignItems: 'center',height:'50vh'}}><Loader active/></div>}
                 {appContext.main.filter(table => appContext.tables.includes(table)).length === 0 && <Segment placeholder style={{height:'52vh'}}>
                     <Header icon>
                         No data

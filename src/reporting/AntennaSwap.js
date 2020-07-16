@@ -28,7 +28,7 @@ const dependancyTable = [
 function AntennaSwap(props){
     const { title , setTitle } = props 
     React.useEffect(()=>{
-        //setTitle(title)
+        setTitle(title)
     },[title])
 
     const match  = useRouteMatch()

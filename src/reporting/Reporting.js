@@ -56,7 +56,7 @@ function Reporting(props){
                 setDependancyTest(true)
             }
         })()
-
+        
     },[])
 
     return <>
@@ -155,7 +155,7 @@ function Reporting(props){
                             setRefreshing(true)
                         }
                     }}/>
-                    <Form.Input defaultValue="sedu" size="small" type='text' label="Site" placeholder="Enter sites/cell" onBlur={(e)=>setSites(e.target.value)} onKeyUp={(e)=>{
+                    <Form.Input defaultValue={localStorage.getItem("historySite") !== null ? localStorage.getItem("historySite") : sites} size="small" type='text' label="Site" placeholder="Enter sites/cell" onBlur={(e)=>{setSites(e.target.value);localStorage.setItem("historySite",e.target.value)}} onKeyUp={(e)=>{
                         if(e.keyCode === 13){
                             e.target.blur()
                             setRefreshing(true)
