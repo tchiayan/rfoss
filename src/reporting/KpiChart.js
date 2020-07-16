@@ -520,6 +520,23 @@ function KPIChart(props){
 
         return _chartProps
     }
+
+    const queryAction = async () => {
+        freezeContext.setFreeze(true , "Querying... ")
+        let chart2G = await query2GChart(chart2GList)
+        set2GChartProps(chart2G)
+        let chart3G = await query3GChart(chart3GList)
+        set3GChartProps(chart3G)
+        let chart4G = await queryLayerChart(chart4GList)
+        set4GChartProps(chart4G)
+        let _chartBlendedList = await loadBlendedChartConfig()
+        let chartBlended = await queryBlendedChart(_chartBlendedList)
+        setBlendedChartProps(chartBlended)
+        let _chartBlendedDataList = await loadBlendedDataChartConfig()
+        let chartBlendedData = await queryBlendedDataChart(_chartBlendedDataList)
+        setBlendedDataChartProps(chartBlendedData)
+        freezeContext.setFreeze(false)
+    }
     React.useEffect(()=>{
         load2GChartConfig()
             .then(() => load3GChartConfig())
@@ -532,27 +549,20 @@ function KPIChart(props){
         <div style={{display: 'flex', alignItems: 'center'}}>
             <Form style={{flexGrow:1}}>
                 <Form.Group widths="equal">
-                    <Form.Input size="small" type='date' label="Start date" max={endDate} value={startDate} onChange={(e,{value})=>setStartDate(value)} />
-                    <Form.Input size="small" type='date' label="End date" min={startDate} value={endDate} onChange={(e,{value})=>setEndDate(value)} />
-                    <Form.Input defaultValue="1011A" size="small" type='text' label="Site/Cell" placeholder="Enter sites/cell" onBlur={(e)=>setSites(e.target.value)}/> 
+                    <Form.Input defaultValue={startDate} size="small" type='date' label="Start date" max={endDate}  onBlur={(e)=>setStartDate(e.target.value)} />
+                    <Form.Input defaultValue={endDate} size="small" type='date' label="End date" min={startDate}  onBlur={(e)=>setEndDate(e.target.value)} />
+                    <Form.Input defaultValue={localStorage.getItem("historySites") !== null ? localStorage.getItem("historySites") : "1011A"} size="small" type='text' label="Site/Cell" placeholder="Enter sites/cell" onBlur={(e)=>{
+                        setSites(e.target.value);
+                        localStorage.setItem("historySites", e.target.value)
+                    }} onKeyUp={(e)=>{
+                        /*if(e.keyCode === 13){
+                            e.target.blur()
+                            queryAction()
+                        }*/
+                    }}/> 
                 </Form.Group>
             </Form>
-            <div style={{marginLeft: '10px'}}><Button onClick={async ()=>{
-                freezeContext.setFreeze(true , "Querying... ")
-                let chart2G = await query2GChart(chart2GList)
-                set2GChartProps(chart2G)
-                let chart3G = await query3GChart(chart3GList)
-                set3GChartProps(chart3G)
-                let chart4G = await queryLayerChart(chart4GList)
-                set4GChartProps(chart4G)
-                let _chartBlendedList = await loadBlendedChartConfig()
-                let chartBlended = await queryBlendedChart(_chartBlendedList)
-                setBlendedChartProps(chartBlended)
-                let _chartBlendedDataList = await loadBlendedDataChartConfig()
-                let chartBlendedData = await queryBlendedDataChart(_chartBlendedDataList)
-                setBlendedDataChartProps(chartBlendedData)
-                freezeContext.setFreeze(false)
-            }}>Query</Button></div>
+            <div style={{marginLeft: '10px'}}><Button onClick={()=>queryAction()}>Query</Button></div>
             <div ref={moreTarget} style={{padding: '6px', cursor: 'pointer'}} onClick={()=>setShowMore(true)}>
                 <Icon name="ellipsis vertical" />
             </div>
@@ -589,18 +599,45 @@ function KPIChart(props){
                         <Menu.Item name="export-report" onClick={()=>{
                             console.log("Export report")
                             freezeContext.setFreeze(true, 'Exporting...')
-                            let operations = [
-                                {operation: 'chart', highchart: chart2GProps , width: 823 , height:272 , x: 0, column: 1},
-                                {operation: 'chart', highchart: chart3GProps , width: 823 , height:272 , x: 830, column: 1}
-                            ]
+                            console.log(chart2GProps)
+                            console.log(chart3GProps)
+                            let operations = []
+                            let i = 0
+
+                            if(chart2GProps.filter(chart => chart.series.length > 0).length > 0){
+                                operations.push({operation: 'chart', highchart: chart2GProps , width: 823 , height:272 , x: i*830, column: 1})
+                                i++;
+                            }
+
+                            if(chart3GProps.filter(chart => chart.series.length > 0).length > 0){
+                                operations.push({operation: 'chart', highchart: chart3GProps , width: 823 , height:272 , x: i*830, column: 1})
+                                i++;
+                            }
+
                             Object.entries(chart4GProps).forEach(([layer, chartProps],layerIndex) => {
                                 operations.push({
-                                    operation: 'chart', highchart: chartProps , width: 823 , height:272 , x: 1660 + layerIndex*830, column: 1
+                                    operation: 'chart', highchart: chartProps , width: 823 , height:272 , x: i*830, column: 1
                                 })
+                                i++;
                             })
-                            operations.push({
-                                operation: 'chart', highchart: chartBlendedProps , width: 823 , height:272 , x: 1660 + Object.keys(chart4GProps).length * 830, column: 1
-                            })
+                            if(chartBlendedProps.length === 1){
+                                if(chartBlendedProps[0].xAxis.categories.length > 0){
+                                    operations.push({
+                                        operation: 'chart', highchart: chartBlendedProps , width: 823 , height:272 , x: i * 830, column: 1
+                                    })
+                                    i++;
+                                }
+                            }
+                            
+                            if(chartBlendedDataProps.length === 1){
+                                if(chartBlendedDataProps[0].xAxis.categories.length > 0){
+                                    operations.push({
+                                        operation: 'chart', highchart: chartBlendedDataProps , width: 823 , height:272 , x:i * 830, column: 1
+                                    })
+                                    i++;
+                                }
+                            }
+                            console.log(operations)
                             db.excelService(operations).finally(()=>{
                                 freezeContext.setFreeze(false)
                             })
