@@ -76,7 +76,7 @@ function SettingModal(props){
                                 let child;
                                 if(col.edit){
                                     if(col.editType === 'text'){
-                                        child = editText.id !== `${rowID}-${colID}` ? <div onDoubleClick={()=>setEditText({id:`${rowID}-${colID}`, value:row[col.field]})}>{row[col.field]}</div> :
+                                        child = editText.id !== `${rowID}-${colID}` ? <div onClick={()=>setEditText({id:`${rowID}-${colID}`, value:row[col.field]})}>{row[col.field]}</div> :
                                             <EditNameInput type="text" value={editText.value} onChange={(e,{value})=>{
                                                 setEdited(true)
                                                 setEditText((old)=>{
@@ -99,7 +99,7 @@ function SettingModal(props){
                                                 
                                             }} />
                                     }else if(col.editType === 'selection'){
-                                        child = editText.id !== `${rowID}-${colID}` ? <div onDoubleClick={()=>setEditText({id:`${rowID}-${colID}`, value:row[col.field]})}>{row[col.field] === null ? 'Double click to select' :row[col.field]}</div> :
+                                        child = editText.id !== `${rowID}-${colID}` ? <div onClick={()=>setEditText({id:`${rowID}-${colID}`, value:row[col.field]})}>{row[col.field] === null ? 'Double click to select' :row[col.field]}</div> :
                                             <Form.Select search selection defaultOpen value={row[col.value]} autoFocus 
                                                 options={addition[col.editSelection].map(option => ({key:option[col.key],value:option[col.key],text:option[col.text]}))}
                                                 onChange={(e,{value, options})=>{
@@ -111,6 +111,28 @@ function SettingModal(props){
                                                 }}
                                                 onBlur={()=>{
                                                     updateSetting(col.value, row[col.value], row.ID).then((response)=>{
+                                                        if(response.status === 'Ok'){
+                                                            //setSettings(_settings)
+                                                        }else{
+                                                            console.log("Unable to update to database") 
+                                                        }
+                                                    }).finally(()=>setEditText({id:null, value: ''}))
+                                                }} />
+                                    }else if(col.editType === 'list'){
+                                        child = editText.id !== `${rowID}-${colID}` ? <div onClick={()=>setEditText({id:`${rowID}-${colID}`, value:row[col.field]})}>{row[col.field] === null ? 'Double click to select' :row[col.field]}</div> :
+                                            <Form.Select search selection defaultOpen value={row[col.field]} autoFocus 
+                                                options={col.editListOptions.map(option => ({key:option,value:option,text:option}))}
+                                                onChange={(e,{value, options})=>{
+                                                    setEdited(true)
+                                                    let _settings = settings.slice()
+                                                    _settings[rowID][col.field] =  value
+                                                    //_settings[rowID][col.value] = value 
+                                                    //_settings[rowID][col.field] = options.find(option => option.key === value).text
+                                                    setSettings(_settings)
+                                                }}
+                                                closeOnChange={true}
+                                                onBlur={()=>{
+                                                    updateSetting(col.field, row[col.field], row.ID).then((response)=>{
                                                         if(response.status === 'Ok'){
                                                             //setSettings(_settings)
                                                         }else{

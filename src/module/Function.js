@@ -45,16 +45,39 @@ const chart = (datatable , charttitle , charttype = 'line' , formatting = {
         chartid:Math.random().toString('26').slice(2), 
         primaryAxisFormat:'general', 
         primaryAxisEvent: {}, 
+        secondaryAxisFormat: 'general',
+        secondaryAxisEvent: {},
         excelLineWidth: null
     }) => {
     //let chartid = Math.random().toString('26').slice(2)
     
-    
+    let chartType = typeof charttype !== 'string' ? {} : {type:charttype}
+    let hasSecondary = typeof charttype === 'string' ? false : Object.values(charttype).find(({targetAxis}) => {
+        return targetAxis !== undefined ? targetAxis === 1 : false
+    })
+
+    let yAxis = [{
+        //id: 'primaryAxis',
+        labels:{
+          formatting: formatting.primaryAxisFormat, 
+          events: formatting.primaryAxisEvent
+        }
+    }]
+    if(hasSecondary){
+      yAxis.push({
+        //id: 'secondaryAxis',
+        labels:{
+          formatting: formatting.primaryAxisFormat, 
+          events: formatting.primaryAxisEvent
+        }, 
+        opposite: true
+      })
+    }
 
     return {
-        id: formatting.chartid,
+        id: formatting.chartid ? formatting.chartid : Math.random().toString('26').slice(2),
         chart:{
-            type: charttype, 
+            ...chartType,
             animation: false, 
             plotBackgroundColor: '#f5f5f5'
         }, 
@@ -64,14 +87,28 @@ const chart = (datatable , charttitle , charttype = 'line' , formatting = {
         xAxis:{
             categories: datatable.slice(1).map(row => row[0])
         }, 
-        yAxis:[{
-            labels:{
-                formatting: formatting.primaryAxisFormat, 
-                events: formatting.primaryAxisEvent
+        yAxis:yAxis,
+        series:datatable[0].slice(1).map((entity , i) => {
+            let defaultSeries = {
+              name: entity, 
+              data:datatable.slice(1).map(row => row[i+1]),
+              //formatter : function(){console.log(this)}
             }
-        }],
-        series:datatable[0].slice(1).map((entity , i) =>{
-            return formatting.excelLineWidth !== null ? {name: entity, data:datatable.slice(1).map(row => row[i+1]), excelLineWidth: formatting.excelLineWidth}: {name: entity, data:datatable.slice(1).map(row => row[i+1])}
+    
+            // extra excel props
+            if(formatting.excelLineWidth !== null){ 
+              defaultSeries['excelLineWidth'] = formatting.excelLineWidth
+            }
+    
+            // axis
+            if(typeof charttype !== 'string'){
+              if(charttype[i] !== undefined){
+                defaultSeries['type'] =  charttype[i]['type'] === undefined ? 'column' :  charttype[i]['type']
+                defaultSeries['yAxis'] = charttype[i]['targetAxis'] === undefined ? 0 : charttype[i]['targetAxis']
+              }
+            }
+            
+            return defaultSeries
         }),
         credits: {
             enabled: false
@@ -83,6 +120,11 @@ const chart = (datatable , charttitle , charttype = 'line' , formatting = {
             },
             shared: true
         },
+        plotOptions:{
+            series:{
+                animation: false
+            }
+        }
     }
 }
 

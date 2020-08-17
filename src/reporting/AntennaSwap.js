@@ -14,6 +14,7 @@ import {
 
 import KPIChart from './KpiChart';
 import TaChart from './TaChart';
+import AntennaSwapReport from './digi/AntennaSwapReport';
 
 const dependancyTable = [
     'antennaswap2g', 
@@ -25,12 +26,15 @@ const dependancyTable = [
     //'ta3gchart',
     //'ta4gchart',
 ]
+
+
 function AntennaSwap(props){
     const { title , setTitle } = props 
     React.useEffect(()=>{
         setTitle(title)
     },[title])
 
+    const defaultTab = "antennaswapreport"
     const match  = useRouteMatch()
     const history = useHistory()
     const appContext = React.useContext(AppContext)
@@ -39,18 +43,22 @@ function AntennaSwap(props){
         if(dependancyTable.filter(table => !appContext.tables.includes(table)).length > 0){
             history.push(`${match.url}/error`)
         }else{
-            history.push(`${match.url}/kpichart`)
+            history.push(`${match.url}/${defaultTab}`)
         }
     }, [appContext.tables])
 
     return (<>
-        <Nav fill variant="tabs" defaultActiveKey="kpichart">
+        <Nav fill variant="tabs" defaultActiveKey={defaultTab}>
+            <Nav.Item>
+                <Nav.Link as={Link} to={`${match.url}/antennaswapreport`} eventKey="antennaswapreport">Antenna Swap Report</Nav.Link>
+            </Nav.Item>
             <Nav.Item>
                 <Nav.Link as={Link} to={`${match.url}/kpichart`} eventKey="kpichart">KPI Chart</Nav.Link>
             </Nav.Item>
             {/*<Nav.Item>
                 <Nav.Link as={Link} to={`${match.url}/tachart`} eventKey="tachart">TA Chart</Nav.Link>
             </Nav.Item>*/}
+            
         </Nav>
 
         <Switch>
@@ -60,6 +68,9 @@ function AntennaSwap(props){
             {/*<Route path={`${match.url}/tachart`}>
                 <TaChart />
             </Route>*/}
+            <Route path={`${match.url}/antennaswapreport`}>
+                <AntennaSwapReport />
+            </Route>
             <Route path={`${match.url}/error`}>
                 <Segment placeholder  style={{height: 'calc( 100vh - 117px )', margin: '10px 0px'}}>
                     <Header icon>

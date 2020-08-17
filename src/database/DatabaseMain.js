@@ -19,7 +19,7 @@ function DatabaseMain(props){
     let match  = useRouteMatch()
 
     return <>
-        <Nav fill variant="tabs" defaultActiveKey="data">
+        <Nav className="react-nav-tab" fill variant="tabs" defaultActiveKey="data">
             <Nav.Item>
                 <Nav.Link as={Link} to={`${match.url}/data`} eventKey="data">Data</Nav.Link>
             </Nav.Item>

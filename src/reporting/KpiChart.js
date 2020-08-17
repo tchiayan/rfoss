@@ -537,6 +537,7 @@ function KPIChart(props){
         setBlendedDataChartProps(chartBlendedData)
         freezeContext.setFreeze(false)
     }
+    
     React.useEffect(()=>{
         load2GChartConfig()
             .then(() => load3GChartConfig())

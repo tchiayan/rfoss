@@ -22,6 +22,7 @@
     "electron-is-dev": "^1.1.0",
     "electron-updater": "^4.2.0",
     "exceljs": "^3.4.0",
+    "expr-eval": "^2.0.2",
     "express": "^4.17.1",
     "firebase": "^7.15.1",
     "highcharts": "^7.2.1",
@@ -40,6 +41,7 @@
     "semantic-ui-css": "^2.4.1",
     "semantic-ui-react": "^0.88.2",
     "sqlite3": "^4.1.0",
+    "styled-components": "^5.1.1",
     "xlstream": "^1.0.11",
     "xlsx": "^0.15.2"
   },

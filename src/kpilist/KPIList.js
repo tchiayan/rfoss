@@ -255,7 +255,7 @@ function KPIList(props){
             <Pagination 
                 activePage={activePage+1} 
                 onPageChange={(e,{activePage})=>setActivePage(activePage-1)}
-                totalPages={Math.floor(formulaList.filter(entry => {
+                totalPages={Math.ceil(formulaList.filter(entry => {
                     let regex = new RegExp(filter.replace(/([\[\\\^\$\.\|\?\*\+\(\)])/g, "\\$1"), 'i')
                     return entry.name.match(regex)
                 }).length/itemPerPage)}

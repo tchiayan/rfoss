@@ -130,7 +130,7 @@ function Reporting(props){
                     </Segment>
                 </Route>
                 <Route path={`${match.url}`}>
-                    <Segment placeholder  style={{height: 'calc( 100vh - 216px )', margin: '10px 0px'}}>
+                    <Segment placeholder style={{height: 'calc( 100vh - 216px )', margin: '10px 0px'}}>
                         <Header icon>
                             Loading...
                         </Header>
@@ -143,19 +143,19 @@ function Reporting(props){
         <div style={{display: 'flex', alignItems: 'center'}}>
             <Form style={{flexGrow:1}}>
                 <Form.Group widths="equal">
-                    <Form.Input size="small" type='date' label="Start date" max={endDate} defaultValue={startDate} onBlur={(e)=>setStartDate(e.target.value)} onKeyUp={(e)=>{
+                    <Form.Input className="semantic-react-form-input" size="small" type='date' label="Start date" max={endDate} defaultValue={startDate} onBlur={(e)=>setStartDate(e.target.value)} onKeyUp={(e)=>{
                         if(e.keyCode === 13){
                             e.target.blur()
                             setRefreshing(true)
                         }
                     }}/>
-                    <Form.Input size="small" type='date' label="End date" min={startDate} defaultValue={endDate} onBlur={(e)=>setEndDate(e.target.value)} onKeyUp={(e)=>{
+                    <Form.Input className="semantic-react-form-input" size="small" type='date' label="End date" min={startDate} defaultValue={endDate} onBlur={(e)=>setEndDate(e.target.value)} onKeyUp={(e)=>{
                         if(e.keyCode === 13){
                             e.target.blur()
                             setRefreshing(true)
                         }
                     }}/>
-                    <Form.Input defaultValue={localStorage.getItem("historySite") !== null ? localStorage.getItem("historySite") : sites} size="small" type='text' label="Site" placeholder="Enter sites/cell" onBlur={(e)=>{setSites(e.target.value);localStorage.setItem("historySite",e.target.value)}} onKeyUp={(e)=>{
+                    <Form.Input className="semantic-react-form-input" defaultValue={localStorage.getItem("historySite") !== null ? localStorage.getItem("historySite") : sites} size="small" type='text' label="Site" placeholder="Enter sites/cell" onBlur={(e)=>{setSites(e.target.value);localStorage.setItem("historySite",e.target.value)}} onKeyUp={(e)=>{
                         if(e.keyCode === 13){
                             e.target.blur()
                             setRefreshing(true)

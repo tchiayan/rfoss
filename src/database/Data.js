@@ -654,7 +654,7 @@ function Data(){
         }).then((isIndexed) => {
             console.log(isIndexed)
             if(isIndexed){
-                queryCellCount(startdate , enddate)
+                //queryCellCount(startdate , enddate)
             }else{
                 toastContext.setInfo('Database is not optimized.')
             }
@@ -673,14 +673,14 @@ function Data(){
     }, [appContext.tables])
 
     return <div style={{marginTop: '10px', height: 'calc(100vh - 110px)', overflowY: 'auto'}}>
-        <Card>
+        <Card className="react-card">
             <Card.Body>
                     <Form>
                         <Form.Group widths="equal" inline>
-                            <Form.Input type="date" required label="Start Date" max={enddate} value={startdate} onChange={(e,{value})=>setStartdate(value)}/>
-                            <Form.Input type="date" required label="End Date" min={startdate} value={enddate} onChange={(e,{value})=>setEnddate(value)}/>
-                            <Form.Input type="text" label="Filter cells" value={filter} onChange={(e,{value})=>setFilter(value)} />
-                            <Button onClick={()=>{
+                            <Form.Input className="semantic-react-form-input" type="date" required label="Start Date" max={enddate} value={startdate} onChange={(e,{value})=>setStartdate(value)}/>
+                            <Form.Input className="semantic-react-form-input" type="date" required label="End Date" min={startdate} value={enddate} onChange={(e,{value})=>setEnddate(value)}/>
+                            <Form.Input className="semantic-react-form-input" type="text" label="Filter cells" value={filter} onChange={(e,{value})=>setFilter(value)} />
+                            <Button  onClick={()=>{
                                 setChartProps(null)
                                 queryCellCount(startdate , enddate, filter)
                             }}>Query</Button>

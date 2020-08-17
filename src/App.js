@@ -16,6 +16,10 @@ import { FreezeProvider , FreezeModal } from './module/FreezeView';
 import {  ErrorModal , InfoModal , ToastProvider } from './module/ToastContext';
 import { AppProvider } from './module/AppContext';
 
+import { ThemeProvider } from 'styled-components';
+import { lightTheme, darkTheme } from './theme';
+import { GlobalStyles } from './global';
+
 import {
   BrowserRouter as Router,
   Switch,
@@ -81,7 +85,6 @@ function App(){
     if(main !== null){
       let _main = JSON.parse(main)
       //console.log(main)
-      console.log(tables)
       console.log(`Set default selected data table [${_main.filter(table => tables.includes(table)).length > 0 ? _main.filter(table => tables.includes(table))[0] : null}]`)
       setSelectedTable(_main.filter(table => tables.includes(table)).length > 0 ? _main.filter(table => tables.includes(table))[0] : null)
       
@@ -124,8 +127,6 @@ function App(){
       useAliasColumn: (_useAliasColumn === null || _useAliasColumn === undefined) ? uploadingOptions.useAliasColumn : JSON.parse(_useAliasColumn),
       uploadingHeader: (_uploadingHeader === null || _uploadingHeader === undefined) ? uploadingOptions.uploadingHeader : parseInt(_uploadingHeader)
     })
-
-    
   }
 
   const updateTables = () => {
@@ -159,7 +160,6 @@ function App(){
       }
 
       let { main , uploadingFormat , sitelevel , celllevel , sectorlevel , uploadingHeader , useAliasColumn , alias , object , date } = setting
-      console.log(main)
       if( main !== null && main !== undefined){
         setSelectedTable(main.filter(table => tables.includes(table)).length > 0 ? main.filter(table => tables.includes(table))[0] : null)
         console.log(`Update main to ${main.join(" , ")}`)
@@ -217,137 +217,141 @@ function App(){
 
   },[])
 
-  return <div style={{width:'100%',height:'100vh'}}>
-    <AppProvider value={{
-        tables:tables, 
-        updateTables:updateTables , 
-        promptTableSelection: (callback) => {
-          setShowTableSelection({show:true, callback:callback})
-        }, 
-        selectedTable:selectedTable,
-        setSelectedTable:setSelectedTable,
-        //showTableSelection: showTableSelection, 
-        main:main, 
-        uploadingFormat:uploadingFormat, 
-        uploadingOptions:uploadingOptions,
-        project: project,
-        objectDate:objectDate,
-        sitelevel:sitelevel, 
-        celllevel:celllevel,
-        sectorlevel:sectorlevel
-      }}>
-      <Router>
-        <FreezeProvider value={{setFreeze:setFreezing}}>
-          <FreezeModal hide={freeze} message={freezeMessage} value={freezeProgress}/>
-          <Sidebar.Pushable  dimmed={true}>
-            <Sidebar as={Menu} animation="overlay" direction="left" visible={sidebarVisible} vertical width='thin' inverted>
-              <Menu.Item style={{height: '40px'}} onClick={()=>setSidebarVisible(false)}>
-                <Icon name="angle left" />
-              </Menu.Item>
-              <Menu.Item as={Link} to="/database" onClick={()=>setSidebarVisible(false)}>
-                Database
-              </Menu.Item>
-              {tables.includes("formulas") && <Menu.Item as={Link} to="/kpilist" onClick={()=>setSidebarVisible(false)}>
-                KPI List
-              </Menu.Item>}
-              {tables.includes("formulas") && <Menu.Item as={Link} to="/reporting" onClick={()=>setSidebarVisible(false)}>
-                Reporting
-              </Menu.Item>}
-            </Sidebar>
-            <Sidebar.Pusher dimmed={sidebarVisible}>
-              <ToastProvider value={{setError:setErrorMessage, setInfo:setInfoMessage}}>
-                <ErrorModal open={errorMessage !== null} onClose={()=>setErrorMessage(null)} message={errorMessage}/>
-                <InfoModal open={infoMessage !== null} onClose={()=>setInfoMessage(null)} message={infoMessage} />
-                <Segment basic style={{padding: '7px'}}>
-                  <div style={{display: 'flex', alignItems: 'center', marginBottom: '10px'}}>
-                    <div style={{padding: '7px', height:'32px', width:'32px', cursor: 'pointer', justifyContent:'center', alignItems: 'center'}} onClick={()=>setSidebarVisible(true)}>  
-                      <Icon name="bars" />
+  return <ThemeProvider theme={lightTheme}>
+    <GlobalStyles />
+    <div style={{width:'100%',height:'100vh'}}>
+      <AppProvider value={{
+          tables:tables, 
+          updateTables:updateTables , 
+          promptTableSelection: (callback) => {
+            setShowTableSelection({show:true, callback:callback})
+          }, 
+          selectedTable:selectedTable,
+          setSelectedTable:setSelectedTable,
+          //showTableSelection: showTableSelection, 
+          main:main, 
+          uploadingFormat:uploadingFormat, 
+          uploadingOptions:uploadingOptions,
+          project: project,
+          objectDate:objectDate,
+          sitelevel:sitelevel, 
+          celllevel:celllevel,
+          sectorlevel:sectorlevel, 
+          theme: 'dark'
+        }}>
+        <Router>
+          <FreezeProvider value={{setFreeze:setFreezing}}>
+            <FreezeModal hide={freeze} message={freezeMessage} value={freezeProgress}/>
+            <Sidebar.Pushable  dimmed={true}>
+              <Sidebar as={Menu} animation="overlay" direction="left" visible={sidebarVisible} vertical width='thin' inverted>
+                <Menu.Item style={{height: '40px'}} onClick={()=>setSidebarVisible(false)}>
+                  <Icon name="angle left" />
+                </Menu.Item>
+                <Menu.Item as={Link} to="/database" onClick={()=>setSidebarVisible(false)}>
+                  Database
+                </Menu.Item>
+                {tables.includes("formulas") && <Menu.Item as={Link} to="/kpilist" onClick={()=>setSidebarVisible(false)}>
+                  KPI List
+                </Menu.Item>}
+                {tables.includes("formulas") && <Menu.Item as={Link} to="/reporting" onClick={()=>setSidebarVisible(false)}>
+                  Reporting
+                </Menu.Item>}
+              </Sidebar>
+              <Sidebar.Pusher dimmed={sidebarVisible}>
+                <ToastProvider value={{setError:setErrorMessage, setInfo:setInfoMessage}}>
+                  <ErrorModal open={errorMessage !== null} onClose={()=>setErrorMessage(null)} message={errorMessage}/>
+                  <InfoModal open={infoMessage !== null} onClose={()=>setInfoMessage(null)} message={infoMessage} />
+                  <Segment basic style={{padding: '7px'}}>
+                    <div style={{display: 'flex', alignItems: 'center', marginBottom: '10px'}}>
+                      <div style={{padding: '7px', height:'32px', width:'32px', cursor: 'pointer', justifyContent:'center', alignItems: 'center'}} onClick={()=>setSidebarVisible(true)}>  
+                        <Icon name="bars" />
+                      </div>
+                      <div style={{fontSize: '1.71428571rem' ,fontWeight: '700'}}>{title}</div>
+                      <div style={{flexGrow: 1}}></div>
+                      <div style={{padding:'0px 10px',fontStyle:'italic',color:'gray', display:'flex',flexDirection:'column',alignItems:'flex-end'}}>
+                        <div style={{fontSize:'0.95em'}}>{licenseValid === null ? 'License Invalid':'License Valid'}</div>
+                        {licenseValid !== null &&<div style={{fontSize:'0.8em'}}>{`Expired on: ${licenseValid}`}</div>}
+                      </div>
                     </div>
-                    <div style={{fontSize: '1.71428571rem' ,fontWeight: '700'}}>{title}</div>
-                    <div style={{flexGrow: 1}}></div>
-                    <div style={{padding:'0px 10px',fontStyle:'italic',color:'gray', display:'flex',flexDirection:'column',alignItems:'flex-end'}}>
-                      <div style={{fontSize:'0.95em'}}>{licenseValid === null ? 'License Invalid':'License Valid'}</div>
-                      {licenseValid !== null &&<div style={{fontSize:'0.8em'}}>{`Expired on: ${licenseValid}`}</div>}
+                    <div>
+
+                      <Switch>
+                        <AuthorizedRoute path="/database">
+                          <DatabaseMain title={'Database'} setTitle={setTitle} />
+                        </AuthorizedRoute>
+                        <AuthorizedRoute path="/kpilist">
+                          <KPIList title={'KPI'} setTitle={setTitle}/>
+                        </AuthorizedRoute>
+                        <AuthorizedRoute path="/reporting">
+                          {project === 'huaweimaxis' && <Reporting title={'Reporting'} setTitle={setTitle} />}
+                          {project === 'ztedigi' && <AntennaSwap title={'Reporting'} setTitle={setTitle} />}
+                        </AuthorizedRoute>
+                        <Route path="/register">
+                          <RegisterLogin title={'License'} setTitle={setTitle} />
+                        </Route>
+                        <Route path="/">
+                          <Redirect to="/database" />
+                        </Route>
+                      </Switch>
                     </div>
-                  </div>
-                  <div>
-
-                    <Switch>
-                      <AuthorizedRoute path="/database">
-                        <DatabaseMain title={'Database'} setTitle={setTitle} />
-                      </AuthorizedRoute>
-                      <AuthorizedRoute path="/kpilist">
-                        <KPIList title={'KPI'} setTitle={setTitle}/>
-                      </AuthorizedRoute>
-                      <AuthorizedRoute path="/reporting">
-                        {project === 'huaweimaxis' && <Reporting title={'Reporting'} setTitle={setTitle} />}
-                        {project === 'ztedigi' && <AntennaSwap title={'Reporting'} setTitle={setTitle} />}
-                      </AuthorizedRoute>
-                      <Route path="/register">
-                        <RegisterLogin title={'License'} setTitle={setTitle} />
-                      </Route>
-                      <Route path="/">
-                        <Redirect to="/database" />
-                      </Route>
-                    </Switch>
-                  </div>
-                </Segment>
-              </ToastProvider>
-            </Sidebar.Pusher>
-          </Sidebar.Pushable>
-          <MainSelection show={showTableSelection.show} closed={showTableSelection.callback} onHide={()=>{setShowTableSelection({show:false,callback:null})}} tables={main.filter(table => tables.includes(table))} selected={selectedTable} onSelectionChange={(table)=>setSelectedTable(table)}/>
-        
-          <Snackbar 
-            anchorOrigin={{
-              vertical: 'bottom',
-              horizontal: 'right'
-            }}
-            open={updateAvaible}
-            onClose={()=>setUpdateAvaible(false)}
-            message="Update available"
-            action={
-              <>
-                <MaterialButton color="primary" size="small" onClick={()=>{
-                  // Send download Update
-                  let db = new Database()
-                  db.downloadUpdate()
-                  setUpdateAvaible(false)
-                }}>Download</MaterialButton>
-                <IconButton size="small" aria-label="close" color="inherit" onClick={()=>setUpdateAvaible(false)}>
-                  <CloseIcon fontSize="small" />
-                </IconButton>
-              </>
-            }
-          />
-
-          <Snackbar 
-            anchorOrigin={{
-              vertical: 'bottom',
-              horizontal: 'right'
-            }}
-            open={updateDownloaded}
-            onClose={()=>setUpdateDownloaded(false)}
-            message="Update downloaded"
-            action={
-              <>
-                <MaterialButton color="primary" size="small" onClick={()=>{
-                  // Send download Update
-                  let db = new Database()
-                  db.quitAndInstall()
-                  setUpdateDownloaded(false)
-                }}>Quit & Install</MaterialButton>
-                <IconButton size="small" aria-label="close" color="inherit" onClick={()=>setUpdateDownloaded(false)}>
-                  <CloseIcon fontSize="small" />
-                </IconButton>
-              </>
-            }
-          />
+                  </Segment>
+                </ToastProvider>
+              </Sidebar.Pusher>
+            </Sidebar.Pushable>
+            <MainSelection show={showTableSelection.show} closed={showTableSelection.callback} onHide={()=>{setShowTableSelection({show:false,callback:null})}} tables={main.filter(table => tables.includes(table))} selected={selectedTable} onSelectionChange={(table)=>setSelectedTable(table)}/>
           
-        </FreezeProvider>
-        
-      </Router>
-    </AppProvider>
-  </div>
+            <Snackbar 
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'right'
+              }}
+              open={updateAvaible}
+              onClose={()=>setUpdateAvaible(false)}
+              message="Update available"
+              action={
+                <>
+                  <MaterialButton color="primary" size="small" onClick={()=>{
+                    // Send download Update
+                    let db = new Database()
+                    db.downloadUpdate()
+                    setUpdateAvaible(false)
+                  }}>Download</MaterialButton>
+                  <IconButton size="small" aria-label="close" color="inherit" onClick={()=>setUpdateAvaible(false)}>
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </>
+              }
+            />
+
+            <Snackbar 
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'right'
+              }}
+              open={updateDownloaded}
+              onClose={()=>setUpdateDownloaded(false)}
+              message="Update downloaded"
+              action={
+                <>
+                  <MaterialButton color="primary" size="small" onClick={()=>{
+                    // Send download Update
+                    let db = new Database()
+                    db.quitAndInstall()
+                    setUpdateDownloaded(false)
+                  }}>Quit & Install</MaterialButton>
+                  <IconButton size="small" aria-label="close" color="inherit" onClick={()=>setUpdateDownloaded(false)}>
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </>
+              }
+            />
+            
+          </FreezeProvider>
+          
+        </Router>
+      </AppProvider>
+    </div>
+  </ThemeProvider>
 }
 
 function AuthorizedRoute({children , ...props}) {
