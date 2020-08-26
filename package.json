@@ -1,6 +1,6 @@
 {
   "name": "rf-oss-util",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "private": true,
   "main": "public/electron.js",
   "author": {
@@ -103,7 +103,7 @@
         {
           "provider": "bintray",
           "package": "rfoss-window",
-          "owner":"Tan Chia Yan"
+          "owner": "Tan Chia Yan"
         }
       ]
     },
