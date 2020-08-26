@@ -140,6 +140,9 @@ function AntennaSwapReport(){
     const [ chart3GSetting , setChart3GSetting ] = React.useState(false) // setting modal
     const [ chart4GSetting , setChart4GSetting ] = React.useState(false) // setting modal
     const [ chartBlendedSetting , setChartBlendedSetting ] = React.useState(false) // setting modal
+    const [ exportedRaw2G , setExportedRaw2G ] = React.useState([])
+    const [ exportedRaw3G , setExportedRaw3G ] = React.useState([])
+    const [ exportedRaw4G , setExportedRaw4G ] = React.useState([])
 
     // Reference
     const moreTarget = React.useRef(null)
@@ -244,6 +247,16 @@ function AntennaSwapReport(){
         let _kpiTable = []
         freezeContext.setFreeze(true , "Querying... ")
         let counters2g = Array.from(new Set(config2g.flatMap(config => Array.from(config.formula.matchAll(/(sum|avg)\((?<counter>\w+)\)/g)).map(match => match.groups.counter))))
+        if(appContext.projectConfig){
+            if(appContext.projectConfig.antennaswap){
+                if(appContext.projectConfig.antennaswap.export){
+                    if(appContext.projectConfig.antennaswap.export.RAW2G){
+                        counters2g.push(...appContext.projectConfig.antennaswap.export.RAW2G.filter(entry => entry.from === 'database' && entry.type !== 'date').map(entry => entry.field))
+                        counters2g = Array.from(new Set(counters2g))
+                    }
+                }
+            }
+        }
         let query2g = await db.query(`SELECT ${appContext.objectDate.date} as date , ${appContext.celllevel} as cell, ${counters2g.join(" , ")} FROM RAW2G WHERE ( [${appContext.objectDate.date}] between '${startDate}' and  '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:mm:ss")}' ) and ( ${sites.split(";").map(site => `${appContext.objectDate.object} LIKE '${site}%'`).join(" or ")} )`)
     
         freezeContext.setFreeze(true , "Querying 2G KPI ...")
@@ -252,12 +265,12 @@ function AntennaSwapReport(){
                 // split to site 
                 row['site'] = row['cell'].match(/\d{4}\w/)[0]
                 row['date'] = moment(row['date']).format("YYYY-MM-DD")
-                row['sector'] = row['cell'].replace(/(?<site>\d{4}\w)_?\d?-\w{2}\d(?<sector>\d)/, '$<site> S$<sector>')
+                row['sector'] = row['cell'].replace(/(?<site>\d{4}\w)_?\d?-\w{2}\d(?<sector>[\d|\w])/, '$<site> S$<sector>')
                 return row
             })
 
-           // setData2g(rawdata2g)
-
+            //setData2g(rawdata2g)
+            
             let _charts2g = config2g.map((config, index) => {
                 let datatable = pivot(rawdata2g.slice(), 'date', config.grouplevel , config.formula)
                 let id = Math.random().toString('26').slice(2)
@@ -340,10 +353,54 @@ function AntennaSwapReport(){
                 }
             )
             setCharts2g(_charts2g)
+
+            if(appContext.projectConfig){
+                if(appContext.projectConfig.antennaswap){
+                    if(appContext.projectConfig.antennaswap.export){
+                        if(appContext.projectConfig.antennaswap.export.RAW2G){
+                            let exportTable = [appContext.projectConfig.antennaswap.export.RAW2G.map(exported => exported.name)]
+                            rawdata2g.slice().forEach(row => {
+                                let exportrow = appContext.projectConfig.antennaswap.export.RAW2G.map(exported => {
+                                    if(exported.type === 'string'){
+                                        if(exported.from === 'fixed'){
+                                            return exported.value
+                                        }else{
+                                            if('postfix' in exported){
+                                                return row[exported.field].toString() + exported.postfix
+                                            }else{
+                                                return row[exported.field]
+                                            }
+                                        }
+                                    }else if(exported.type === 'date'){
+                                        if(exported.add !== undefined){
+                                            return moment(row[exported.field]).clone().add(exported.add.period , exported.add.granularity).format(exported.format)
+                                        }else{
+                                            return moment(row[exported.field]).format(exported.format)
+                                        }
+                                    }
+                                })
+                                exportTable.push(exportrow)
+                            })
+                            setExportedRaw2G(exportTable)
+                        }
+                    }
+                }
+            }
         }
 
         freezeContext.setFreeze(true , "Querying 3G KPI ...")
         let counters3g = Array.from(new Set(config3g.flatMap(config => Array.from(config.formula.matchAll(/(sum|avg)\((?<counter>\w+)\)/g)).map(match => match.groups.counter))))
+        if(appContext.projectConfig){
+            if(appContext.projectConfig.antennaswap){
+                if(appContext.projectConfig.antennaswap.export){
+                    if(appContext.projectConfig.antennaswap.export.RAW3G){
+                        counters3g.push(...appContext.projectConfig.antennaswap.export.RAW3G.filter(entry => entry.from === 'database' && entry.type !== 'date').map(entry => entry.field))
+                        counters3g = Array.from(new Set(counters3g))
+                    }
+                }
+            }
+        }
+
         let query3g = await db.query(`SELECT ${appContext.objectDate.date} as date , ${appContext.celllevel} as cell, ${counters3g.join(" , ")} FROM RAW3G WHERE ( [${appContext.objectDate.date}] between '${startDate}' and  '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:mm:ss")}' ) and ( ${sites.split(";").map(site => `${appContext.objectDate.object} LIKE '${site}%'`).join(" or ")} )`)
 
         if(query3g.status === 'Ok'){
@@ -351,7 +408,7 @@ function AntennaSwapReport(){
             let rawdata3g = query3g.result.map(row => {
                 // split to site 
                 row['site'] = row['cell'].match(/\d{4}\w/)[0]
-                row['sector'] = row['cell'].replace(/(?<site>\d{4}\w)_?\d?-\w{2}\d(?<sector>\d)/, '$<site> S$<sector>')
+                row['sector'] = row['cell'].replace(/(?<site>\d{4}\w)_?\d?-\w{2}\d(?<sector>[\d|\w])/, '$<site> S$<sector>')
                 row['date'] = moment(row['date']).format("YYYY-MM-DD")
                 return row
             })
@@ -454,17 +511,60 @@ function AntennaSwapReport(){
                 }
             )
             setCharts3g(_charts3g)
+
+            if(appContext.projectConfig){
+                if(appContext.projectConfig.antennaswap){
+                    if(appContext.projectConfig.antennaswap.export){
+                        if(appContext.projectConfig.antennaswap.export.RAW3G){
+                            let exportTable = [appContext.projectConfig.antennaswap.export.RAW3G.map(exported => exported.name)]
+                            rawdata3g.slice().forEach(row => {
+                                let exportrow = appContext.projectConfig.antennaswap.export.RAW3G.map(exported => {
+                                    if(exported.type === 'string'){
+                                        if(exported.from === 'fixed'){
+                                            return exported.value
+                                        }else{
+                                            if('postfix' in exported){
+                                                return row[exported.field].toString() + exported.postfix
+                                            }else{
+                                                return row[exported.field]
+                                            }
+                                        }
+                                    }else if(exported.type === 'date'){
+                                        if("add" in exported){
+                                            return moment(row[exported.field]).clone().add(exported.add.period , exported.add.granularity).format(exported.format)
+                                        }else{
+                                            return moment(row[exported.field]).format(exported.format)
+                                        }
+                                    }
+                                })
+                                exportTable.push(exportrow)
+                            })
+                            setExportedRaw3G(exportTable)
+                        }
+                    }
+                }
+            }
         }
 
         freezeContext.setFreeze(true , "Querying 4G KPI ...")
         let counters4g = Array.from(new Set(config4g.flatMap(config => Array.from(config.formula.matchAll(/(sum|avg)\((?<counter>\w+)\)/g)).map(match => match.groups.counter))))
+        if(appContext.projectConfig){
+            if(appContext.projectConfig.antennaswap){
+                if(appContext.projectConfig.antennaswap.export){
+                    if(appContext.projectConfig.antennaswap.export.RAW4G){
+                        counters4g.push(...appContext.projectConfig.antennaswap.export.RAW4G.filter(entry => entry.from === 'database' && entry.type !== 'date').map(entry => entry.field))
+                        counters4g = Array.from(new Set(counters4g))
+                    }
+                }
+            }
+        }
         let query4g = await db.query(`SELECT ${appContext.objectDate.date} as date , ${appContext.celllevel} as cell, ${counters4g.join(" , ")} FROM RAW4G WHERE ( [${appContext.objectDate.date}] between '${startDate}' and  '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:mm:ss")}' ) and ( ${sites.split(";").map(site => `${appContext.objectDate.object} LIKE '${site}%'`).join(" or ")} )`)
-
+        console.log(`SELECT ${appContext.objectDate.date} as date , ${appContext.celllevel} as cell, ${counters4g.join(" , ")} FROM RAW4G WHERE ( [${appContext.objectDate.date}] between '${startDate}' and  '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:mm:ss")}' ) and ( ${sites.split(";").map(site => `${appContext.objectDate.object} LIKE '${site}%'`).join(" or ")} )`)
         if(query4g.status === 'Ok'){
             let rawdata4g = query4g.result.map(row => {
                 // split to site 
                 row['site'] = row['cell'].match(/\d{4}\w/)[0]
-                row['sector'] = row['cell'].replace(/(?<site>\d{4}\w)_?\d?-\w{2}\d(?<sector>\d)/, '$<site> S$<sector>')
+                row['sector'] = row['cell'].replace(/(?<site>\d{4}\w)_?\d?-\w{2}\d(?<sector>[\d|\w])/, '$<site> S$<sector>')
                 row['date'] = moment(row['date']).format("YYYY-MM-DD")
                 
                 counters4g.forEach(field => {
@@ -596,7 +696,44 @@ function AntennaSwapReport(){
                     table:pivot(eachlayer.data.slice(), 'sector', config4g.map(config => config.title) ,  config4g.map(config => config.formatting === 'percentage' ? `100*(${config.formula})`:config.formula))
                 }}
             ))
+
             setCharts4g(charts4g)
+
+            if(appContext.projectConfig){
+                if(appContext.projectConfig.antennaswap){
+                    if(appContext.projectConfig.antennaswap.export){
+                        console.log(appContext.projectConfig.antennaswap.export)
+                        if(appContext.projectConfig.antennaswap.export.RAW4G){
+                            let exportTable = [appContext.projectConfig.antennaswap.export.RAW4G.map(exported => exported.name)]
+                            console.log(rawdata4g)
+                            rawdata4g.slice().forEach(row => {
+                                let exportrow = appContext.projectConfig.antennaswap.export.RAW4G.map(exported => {
+                                    if(exported.type === 'string'){
+                                        if(exported.from === 'fixed'){
+                                            return exported.value
+                                        }else{
+                                            if('postfix' in exported){
+                                                return row[exported.field].toString() + exported.postfix
+                                            }else{
+                                                return row[exported.field]
+                                            }
+                                            
+                                        }
+                                    }else if(exported.type === 'date'){
+                                        if(exported.add !== undefined){
+                                            return moment(row[exported.field]).clone().add(exported.add.period , exported.add.granularity).format(exported.format)
+                                        }else{
+                                            return moment(row[exported.field]).format(exported.format)
+                                        }
+                                    }
+                                })
+                                exportTable.push(exportrow)
+                            })
+                            setExportedRaw4G(exportTable)
+                        }
+                    }
+                }
+            }
         }
 
         freezeContext.setFreeze(true, "Querying blended KPI ...")
@@ -819,6 +956,22 @@ function AntennaSwapReport(){
                                 }
                             }
                             console.log(operations)
+
+                            if(exportedRaw2G.length > 0){
+                                operations.push({operation: 'add_new_sheet', name: "RAW2G"})
+                                operations.push({operation: 'write', data: exportedRaw2G, row: 1 , col: 1})
+                            }
+
+                            if(exportedRaw3G.length > 0){
+                                operations.push({operation: 'add_new_sheet', name: "RAW3G"})
+                                operations.push({operation: 'write', data: exportedRaw3G, row: 1 , col: 1})
+                            }
+
+                            console.log(exportedRaw4G)
+                            if(exportedRaw4G.length > 0){
+                                operations.push({operation: 'add_new_sheet', name: "RAW4G"})
+                                operations.push({operation: 'write', data: exportedRaw4G, row: 1 , col: 1})
+                            }
                             db.excelService(operations).finally(()=>{
                                 freezeContext.setFreeze(false)
                             })

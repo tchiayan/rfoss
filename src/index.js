@@ -19,12 +19,12 @@ console.log(process.env)
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 
-// Add analytic feature
-firebase.analytics();
-
 if(window.require){
     ReactDOM.render(<App />, document.getElementById('root'));
 }
+
+// Add analytic feature
+firebase.analytics();
 
 // If you want your app to work offline and load faster, you can change
 // unregister() to register() below. Note this comes with some pitfalls.

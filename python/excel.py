@@ -9,11 +9,12 @@ worksheet = workbook.Sheets("Sheet1")
 
 def writeCells(worksheet , table , startrow = 1 , startcolumn = 1):
     for rowindex, row  in enumerate(table):
-        for columnindex ,cell  in enumerate(row):
+        worksheet.Range(worksheet.Cells(rowindex+startrow, startcolumn) , worksheet.Cells(rowindex+startrow, startcolumn+len(row)-1)).Value = row
+        """for columnindex ,cell  in enumerate(row):
             if cell == "" or cell == None:
                 pass
             else:
-                worksheet.Cells(rowindex+startrow, columnindex+startcolumn).Value = cell 
+                worksheet.Cells(rowindex+startrow, columnindex+startcolumn).Value = cell"""
 
 def mergeCells(worksheet, startRow , startCol , endRow, endCol):
     worksheet.Range(worksheet.Cells(startRow, startCol), worksheet.Cells(endRow, endCol)).Select() 

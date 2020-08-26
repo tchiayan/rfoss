@@ -21,6 +21,9 @@ const configFilePath = "./config.js"
 let defaultDbPath = path.join(process.cwd(),"database.db")
 let configuration; 
 
+autoUpdater.logger = require("electron-log")
+autoUpdater.logger.transports.file.level = "info"
+
 if(fs.existsSync(configFilePath)){
     configuration = JSON.parse(fs.readFileSync(configFilePath, {encoding:"utf-8"}))
     defaultDbPath = configuration.dbPath
@@ -30,29 +33,6 @@ if(fs.existsSync(configFilePath)){
     fs.writeFileSync(configFilePath, JSON.stringify(configuration), {encoding:'utf-8'})
     // defaultDbPath = "./core.db"
 }
-
-/* Electron */
-/*function runApp(){
-    if(!isDev){
-        console.log('start server')
-        const _app = express()
-        const _port = 5151
-
-        _app.use("/",express.static(`${path.join(__dirname, '../build/')}`))
-
-        _app.get('/', (req,res)=>{
-            res.sendFile('index.html',{'root':`${path.join(__dirname, '../build/')}`})
-        })
-
-        _app.listen(_port, ()=>{
-            console.log(`resources serve on port ${_port}`)
-            createWindow()
-        })
-    }else{
-        console.log('development detected. load from localhost:3000')
-        createWindow()
-    }
-}*/
 
 function runApp(){
     createWindow()
@@ -85,7 +65,7 @@ function createWindow() {
 
     //mainWindow.webContents.openDevTools({mode:'bottom'})
     autoUpdater.autoDownload = false
-    autoUpdater.setFeedURL('https://storage.googleapis.com/rfoss/')
+    //autoUpdater.setFeedURL('https://storage.googleapis.com/rfoss/')
     autoUpdater.checkForUpdatesAndNotify();
 
     //Testing for update

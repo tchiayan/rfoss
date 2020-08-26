@@ -43,6 +43,7 @@ const updateRegisterListenWhenOnline = ( callback ) => {
                                         sitelevel: undefined, 
                                         celllevel: undefined, 
                                         sectorlevel: undefined,
+                                        projectconfig: undefined,
                                     }
                                     Object.assign(setting , snapshot.val())
                                     

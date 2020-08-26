@@ -20,6 +20,7 @@
     "bootstrap": "^4.3.1",
     "csv-parser": "^2.3.3",
     "electron-is-dev": "^1.1.0",
+    "electron-log": "^4.2.4",
     "electron-updater": "^4.2.0",
     "exceljs": "^3.4.0",
     "expr-eval": "^2.0.2",
@@ -100,8 +101,9 @@
     "win": {
       "publish": [
         {
-          "provider": "generic",
-          "url": "https://storage.googleapis.com/rfoss/"
+          "provider": "bintray",
+          "package": "rfoss-window",
+          "owner":"Tan Chia Yan"
         }
       ]
     },

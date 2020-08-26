@@ -55,6 +55,7 @@ function App(){
   const [ selectedTable , setSelectedTable ] = React.useState(null)
   const [ showTableSelection , setShowTableSelection ] = React.useState({show:false,callback:null})
   const [ project , setProject ] = React.useState(null)
+  const [ projectConfig , setProjectConfig ] = React.useState(null)
 
   const setFreezing = (show , message = "Loading..." , progress = null) => {
     setFreeze(show)
@@ -111,6 +112,11 @@ function App(){
       setSectorlevel(_sectorlevel)
     }
 
+    let _projectConfig = localStorage.getItem('projectconfig')
+    if(_projectConfig !== null){
+      setProjectConfig(JSON.parse(_projectConfig))
+    }
+
     let _uploadingHeader = localStorage.getItem('uploadingHeader')
     let _useAliasColumn = localStorage.getItem('useAliasColumn')
     let _alias = localStorage.getItem('alias')
@@ -159,7 +165,9 @@ function App(){
         setProject(project)
       }
 
-      let { main , uploadingFormat , sitelevel , celllevel , sectorlevel , uploadingHeader , useAliasColumn , alias , object , date } = setting
+      
+
+      let { main , uploadingFormat , sitelevel , celllevel , sectorlevel , uploadingHeader , useAliasColumn , alias , object , date, projectConfig } = setting
       if( main !== null && main !== undefined){
         setSelectedTable(main.filter(table => tables.includes(table)).length > 0 ? main.filter(table => tables.includes(table))[0] : null)
         console.log(`Update main to ${main.join(" , ")}`)
@@ -185,6 +193,11 @@ function App(){
 
       if(object !== null && date !== null && object !== undefined && date !== undefined){
         setObjectDate({object:object,date:date})
+      }
+
+      if(projectConfig !== null && projectConfig !== undefined){
+        console.log(projectConfig)
+        setProjectConfig(projectConfig)
       }
 
       setUploadingOptions({
@@ -237,7 +250,8 @@ function App(){
           sitelevel:sitelevel, 
           celllevel:celllevel,
           sectorlevel:sectorlevel, 
-          theme: 'dark'
+          theme: 'dark', 
+          projectConfig: projectConfig
         }}>
         <Router>
           <FreezeProvider value={{setFreeze:setFreezing}}>
