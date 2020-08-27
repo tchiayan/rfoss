@@ -1,6 +1,6 @@
 {
   "name": "rf-oss-util",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "private": true,
   "main": "public/electron.js",
   "author": {
@@ -84,7 +84,7 @@
     "appId": "com.electron.rfosstool",
     "productName": "RF OSS",
     "asar": true,
-    "artifactName":"${productName}_Setup_${version}.${ext}",
+    "artifactName": "${productName}_Setup_${version}.${ext}",
     "files": [
       "!build/upload.exe",
       "!build/excel.exe"
@@ -106,7 +106,7 @@
           "url": "https://storage.googleapis.com/rfoss/"
         }
       ],
-      "icon":"build/icon.png"
+      "icon": "build/icon.png"
     },
     "nsis": {
       "oneClick": false,
