@@ -251,8 +251,9 @@ function AntennaSwapReport(){
             if(appContext.projectConfig.antennaswap){
                 if(appContext.projectConfig.antennaswap.export){
                     if(appContext.projectConfig.antennaswap.export.RAW2G){
-                        counters2g.push(...appContext.projectConfig.antennaswap.export.RAW2G.filter(entry => entry.from === 'database' && entry.type !== 'date').map(entry => entry.field))
+                        counters2g.push(...appContext.projectConfig.antennaswap.export.RAW2G.filter(entry => entry.from === 'database' && entry.type !== 'date').filter(entry => entry.field !== 'cell').map(entry => entry.field))
                         counters2g = Array.from(new Set(counters2g))
+
                     }
                 }
             }
@@ -266,6 +267,7 @@ function AntennaSwapReport(){
                 row['site'] = row['cell'].match(/\d{4}\w/)[0]
                 row['date'] = moment(row['date']).format("YYYY-MM-DD")
                 row['sector'] = row['cell'].replace(/(?<site>\d{4}\w)_?\d?-\w{2}\d(?<sector>[\d|\w])/, '$<site> S$<sector>')
+                row['cell'] = row['cell'].replace(/(?<site>\d{4}[A-Z|a-z])_?\d?-(?<layer>[A-Z|a-z]{2})(?<sector>\d)_?\d?/ , '$<site>-$<layer>$<sector>')
                 return row
             })
 
@@ -394,7 +396,7 @@ function AntennaSwapReport(){
             if(appContext.projectConfig.antennaswap){
                 if(appContext.projectConfig.antennaswap.export){
                     if(appContext.projectConfig.antennaswap.export.RAW3G){
-                        counters3g.push(...appContext.projectConfig.antennaswap.export.RAW3G.filter(entry => entry.from === 'database' && entry.type !== 'date').map(entry => entry.field))
+                        counters3g.push(...appContext.projectConfig.antennaswap.export.RAW3G.filter(entry => entry.from === 'database' && entry.type !== 'date').filter(entry => entry.field !== 'cell').map(entry => entry.field))
                         counters3g = Array.from(new Set(counters3g))
                     }
                 }
@@ -404,7 +406,6 @@ function AntennaSwapReport(){
         let query3g = await db.query(`SELECT ${appContext.objectDate.date} as date , ${appContext.celllevel} as cell, ${counters3g.join(" , ")} FROM RAW3G WHERE ( [${appContext.objectDate.date}] between '${startDate}' and  '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:mm:ss")}' ) and ( ${sites.split(";").map(site => `${appContext.objectDate.object} LIKE '${site}%'`).join(" or ")} )`)
 
         if(query3g.status === 'Ok'){
-
             let rawdata3g = query3g.result.map(row => {
                 // split to site 
                 row['site'] = row['cell'].match(/\d{4}\w/)[0]
@@ -552,17 +553,21 @@ function AntennaSwapReport(){
             if(appContext.projectConfig.antennaswap){
                 if(appContext.projectConfig.antennaswap.export){
                     if(appContext.projectConfig.antennaswap.export.RAW4G){
-                        counters4g.push(...appContext.projectConfig.antennaswap.export.RAW4G.filter(entry => entry.from === 'database' && entry.type !== 'date').map(entry => entry.field))
+                        counters4g.push(...appContext.projectConfig.antennaswap.export.RAW4G.filter(entry => entry.from === 'database' && entry.type !== 'date').filter(entry => entry.field !== 'cell').map(entry => entry.field))
                         counters4g = Array.from(new Set(counters4g))
                     }
                 }
             }
         }
+        console.log(counters4g)
         let query4g = await db.query(`SELECT ${appContext.objectDate.date} as date , ${appContext.celllevel} as cell, ${counters4g.join(" , ")} FROM RAW4G WHERE ( [${appContext.objectDate.date}] between '${startDate}' and  '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:mm:ss")}' ) and ( ${sites.split(";").map(site => `${appContext.objectDate.object} LIKE '${site}%'`).join(" or ")} )`)
         console.log(`SELECT ${appContext.objectDate.date} as date , ${appContext.celllevel} as cell, ${counters4g.join(" , ")} FROM RAW4G WHERE ( [${appContext.objectDate.date}] between '${startDate}' and  '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:mm:ss")}' ) and ( ${sites.split(";").map(site => `${appContext.objectDate.object} LIKE '${site}%'`).join(" or ")} )`)
         if(query4g.status === 'Ok'){
+            console.log(query4g.result.slice())
             let rawdata4g = query4g.result.map(row => {
                 // split to site 
+                //console.log(row['object'])
+                //row['_object'] = row['object']
                 row['site'] = row['cell'].match(/\d{4}\w/)[0]
                 row['sector'] = row['cell'].replace(/(?<site>\d{4}\w)_?\d?-\w{2}\d(?<sector>[\d|\w])/, '$<site> S$<sector>')
                 row['date'] = moment(row['date']).format("YYYY-MM-DD")
@@ -575,7 +580,7 @@ function AntennaSwapReport(){
                 
                 return row
             })
-            
+            console.log(rawdata4g.slice())
 
             const layerDefinition = {
                 1: 'L26',

@@ -63,7 +63,7 @@ function createWindow() {
     mainWindow.removeMenu()
     mainWindow.setMenu(null)
 
-    //mainWindow.webContents.openDevTools({mode:'bottom'})
+    // mainWindow.webContents.openDevTools({mode:'bottom'})
     autoUpdater.autoDownload = false
     //autoUpdater.setFeedURL('https://storage.googleapis.com/rfoss/')
     autoUpdater.checkForUpdatesAndNotify();
