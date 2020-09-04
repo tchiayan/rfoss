@@ -1,96 +1,111 @@
 import React from 'react';
+import { useHistory } from 'react-router-dom'
 
 import { Card } from 'react-bootstrap';
 import { Form , Button , Message} from 'semantic-ui-react';
+import AppContext from './module/AppContext';
 import { Database } from './Database';
 import * as moment from 'moment';
 
 import * as firebase from 'firebase/app';
 import "firebase/database"
 
-const updateRegisterListenWhenOnline = ( callback ) => {
+/**
+ * Listen to device online/offline status.
+ * Subscribe to realtime configuration upon online and unsubscribe the configuration once app goes offline.
+ * Update the local storage variable once if any changes
+ * @param {Function} onlineCallback - Callback function when application goes online
+ * @param {Function} offlineCallback - Callback function when application goes offline
+ * 
+ * @returns {void}
+ */
+const updateRegisterListenWhenOnline = ( onlineCallback , callbackIfOffline ) => {
+    
+    let appVersion = process.env.REACT_APP_VERSION.replace(/\./g, '`')
     let db = new Database()
+
+    
     db.getComputerID().then((id)=>{
         let connectedRef = firebase.database().ref(".info/connected");
         console.log('Listen to online/offline')
+        let licenseSubscription = null
+        let configSubscription = null
         connectedRef.on("value", (snapshot)=>{
             if (snapshot.val() === true){
-                console.log('Application go online')
-                firebase.database().ref(`license/${id}`).once('value').then(async (snapshot)=>{
-                    if(snapshot.val() !== null){
-                        console.log('Update local license')
-                        const { email , project , expired } = snapshot.val()
-                        window.localStorage.setItem("expired",expired)
-                        window.localStorage.setItem("project",project)
-                        if(moment(expired, "YYYY-MM-DD").diff(moment(),'days') >= 0){
-                            window.localStorage.setItem("isExpired", false)
-                        }else{
-                            window.localStorage.setItem("isExpired", true)
-                        }
-
-                        let _setting = {}
-                        if(!!project){
-                            console.log(`Get lastest project setting [${project}] from online`)
-                            _setting = await firebase.database().ref(`projectSetting/${project}`).once('value').then((snapshot)=>{
-                                if(snapshot.val()){
-                                    let setting = {
-                                        main: undefined,
-                                        uploadingFormat: undefined, 
-                                        useAliasColumn: undefined, 
-                                        date: undefined, 
-                                        object: undefined, 
-                                        alias: undefined, 
-                                        sitelevel: undefined, 
-                                        celllevel: undefined, 
-                                        sectorlevel: undefined,
-                                        projectconfig: undefined,
-                                    }
-                                    Object.assign(setting , snapshot.val())
-                                    
-                                    /*window.localStorage.setItem("main", JSON.stringify(main))
-                                    window.localStorage.setItem("uploadingFormat", uploadingFormat)
-                                    window.localStorage.setItem("uploadingHeader", uploadingHeader)
-                                    window.localStorage.setItem("useAliasColumn", useAliasColumn)
-                                    window.localStorage.setItem("date", date)
-                                    window.localStorage.setItem("object", object)
-                                    if(alias === undefined) {
-                                        window.localStorage.removeItem("alias")
-                                    }else{
-                                        window.localStorage.setItem("alias", JSON.stringify(alias))
-                                    }
-                                    window.localStorage.setItem("sitelevel", sitelevel)
-                                    window.localStorage.setItem("celllevel", celllevel)
-                                    window.localStorage.setItem("sectorlevel", sectorlevel)*/
-
-                                    Object.entries(setting).forEach(([field , value]) => {
-                                        if(typeof value === 'object'){
-                                            window.localStorage.setItem(field , JSON.stringify(value))
-                                        }else if(typeof value === 'undefined'){
-                                            window.localStorage.removeItem(field)
-                                        }else{
-                                            window.localStorage.setItem(field , value)
+                console.log('Application goes online')
+                licenseSubscription = firebase.database().ref(`rfoss/license/${id}`).on('value' , async (snapshot)=>{
+                    if(!!snapshot){
+                        if(snapshot.val() !== null){
+                            const { email , project , expired } = snapshot.val()
+                            window.localStorage.setItem("expired",expired)
+                            window.localStorage.setItem("project",project)
+                            if(moment(expired, "YYYY-MM-DD").diff(moment(),'days') >= 0){
+                                window.localStorage.setItem("isExpired", false)
+                            }else{
+                                window.localStorage.setItem("isExpired", true)
+                            }
+    
+                            let _setting = {}
+                            if(!!project){
+                                console.log(`Get lastest project setting [${project}] from online [rfoss/version/${appVersion}/projectSetting/${project}]`)
+                                _setting = await firebase.database().ref(`rfoss/version/${appVersion}/projectSetting/${project}`).once('value').then((snapshot)=>{
+                                    if(snapshot.val()){
+                                        let setting = {
+                                            main: undefined,
+                                            uploadingFormat: undefined, 
+                                            useAliasColumn: undefined, 
+                                            date: undefined, 
+                                            object: undefined, 
+                                            alias: undefined, 
+                                            sitelevel: undefined, 
+                                            celllevel: undefined, 
+                                            sectorlevel: undefined,
+                                            projectconfig: undefined,
+                                            defaultsetting: undefined,
                                         }
-                                    })
-
-                                    return setting
-                                }
+                                        Object.assign(setting , snapshot.val())
+    
+                                        Object.entries(setting).forEach(([field , value]) => {
+                                            if(typeof value === 'object'){
+                                                window.localStorage.setItem(field , JSON.stringify(value))
+                                            }else if(typeof value === 'undefined'){
+                                                window.localStorage.removeItem(field)
+                                            }else{
+                                                window.localStorage.setItem(field , value)
+                                            }
+                                        })
+    
+                                        return setting
+                                    }
+                                })
+                            }
+                            onlineCallback({
+                                ..._setting,
+                                project: project,
+                                email: email, 
+                                expired: expired
+    
                             })
+                        }else{
+                            window.localStorage.removeItem("expired")
+                            window.localStorage.removeItem("project")
+                            window.localStorage.removeItem("isExpired")
                         }
-
-                        console.log(_setting)
-                        callback({
-                            ..._setting,
-                            project: project,
-                            email: email, 
-                            expired: expired
-
-                        })
-                    }else{
-                        window.localStorage.removeItem("expired")
-                        window.localStorage.removeItem("project")
-                        window.localStorage.removeItem("isExpired")
                     }
+                    
                 })
+            }else{
+                // unsubscribe any online change event
+                if(licenseSubscription !== null){
+                    licenseSubscription()
+                }
+
+                if(configSubscription !== null){
+                    configSubscription()
+                }
+
+                console.log(`Application offline, get from offline`)
+                callbackIfOffline()
             }
         })
     })  
@@ -104,71 +119,43 @@ function RegisterLogin(props){
     const [ project , setProject ] = React.useState("")
     const [ expired , setExpired ] = React.useState(null)
     const [ isExpired , setIsExpired ] = React.useState(false)
+    const appContext = React.useContext(AppContext)
+    const history = useHistory();
     //const emailRef = React.useRef()
 
-    React.useEffect(()=>{setTitle(title)},[title])
-    React.useEffect(()=>{
+    React.useEffect(() => {
         let db = new Database()
         db.getComputerID().then((id)=>{
             setComputerId(id)
 
-            let connectedRef = firebase.database().ref(".info/connected");
-            connectedRef.on("value", (snapshot)=>{
-                if (snapshot.val() === true){
-                    firebase.database().ref(`license/${id}`).once('value').then((snapshot)=>{
-                        //console.log(snapshot.val())
-        
-                        if(snapshot.val() === null){
-                            setRegistered(false)
-                        }else{
-                            const { email , project , expired } = snapshot.val()
-                            setEmail(email)
-                            setRegistered(true)
-                            if(project){
-                                setProject(project)
-                            }
-        
-                            if(expired){
-                                setExpired(expired)
-                            }
-        
-                            window.localStorage.setItem("expired",expired)
-                            window.localStorage.setItem("project",project)
-        
-                            if(moment(expired, "YYYY-MM-DD").diff(moment(),'days') >= 0){
-                                window.localStorage.setItem("isExpired", false)
-                                setIsExpired(false)
-                            }else{
-                                window.localStorage.setItem("isExpired", true)
-                                setIsExpired(true)
-                            }
-                        }
-                    })
-                } else {
-                    //console.log("user is offline")
-                    let expired = window.localStorage.getItem("expired")
-                    let project = window.localStorage.getItem("project")
-                    let email = window.localStorage.getItem("email")
-                    
-                    if(email !== null) {setEmail(email);setRegistered(true)}
-                    if(project !== null) setProject(project)
-                    if(expired !== null) setExpired(expired)
+            if(appContext.licenseValid !== null && appContext.project !== null && appContext.expiredDate !== null){
+                
+                setProject(appContext.project)
+                setExpired(appContext.expiredDate)
 
-                    if(moment(expired, "YYYY-MM-DD").diff(moment(),'days') >= 0){
-                        window.localStorage.setItem("isExpired", false)
-                        setIsExpired(false)
-                    }else{
-                        window.localStorage.setItem("isExpired", true)
-                        setIsExpired(true)
-                    }
+                if(moment(appContext.expiredDate, "YYYY-MM-DD").diff(moment(),'days') >= 0){
+                    setIsExpired(false)
+                    history.push("/database")
+                }else{
+                    setIsExpired(true)
                 }
-            })
-        })
-    },[])
+            } 
 
+            if(appContext.email !== '' && appContext.email !== null){
+                setEmail(appContext.email)
+                setRegistered(true)
+            }
+        })
+    }, [appContext.email , appContext.project , appContext.licenseValid, appContext.expiredDate])
+    
+    React.useEffect(()=>{
+        setTitle(title)
+    },[title])
+    
+    
     const registeredComputer = () => {
         if(/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email)){
-            firebase.database().ref(`license/${computerId}`).set({
+            firebase.database().ref(`rfoss/license/${computerId}`).set({
                 email:email, 
                 register: new Date().toISOString(), 
             },(error)=>{

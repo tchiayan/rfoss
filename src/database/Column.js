@@ -98,7 +98,7 @@ function Column(){
         }
     },[])
 
-    return <div style={{overflowY:'auto', maxHeight:'calc( 100vh - 132px )', margin: '10px 0px'}} class>
+    return <div style={{overflowY:'auto', maxHeight:'calc( 100vh - 132px )', margin: '10px 0px'}} >
         <div style={{display:'flex'}}>
             <Form>
                 <Form.Select selection placeholder="Select table" onChange={(e,{value})=>{appContext.setSelectedTable(value);loadColumns(value)}} value={appContext.selectedTable} options={appContext.main.filter(table => appContext.tables.includes(table)).map(table => ({key:table,value:table,text:table}))}/>

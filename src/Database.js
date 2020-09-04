@@ -34,8 +34,6 @@ class Database {
             })
         })
     }
-
-    
     
     async linkDatabase(){
         this.ipcRenderer.send("linkDatabase")
@@ -99,6 +97,20 @@ class Database {
         })
     }
 
+    /**
+     * 
+     * @typedef {Object} QueryResponse
+     * @property {string} status Status of query "Ok" or "Error"
+     * @property {Array} [result]  Return results in array of object (key , value) if status is 'Ok'
+     * 
+     */
+
+    /**
+     * Database update operation
+     * @param {*} queryString SQL Update String
+     * 
+     * @returns {Promise<QueryResponse>} Update operation status
+     */
     async update(queryString){
         const session = Math.random().toString(16).slice(2)
 
@@ -236,9 +248,10 @@ class Database {
             onFinishCallback()
         })
 
-        this.ipcRenderer.once(`uploadFileStatus_${uploadingFormat}_${session}_error`, ()=>{
+        this.ipcRenderer.once(`uploadFileStatus_${uploadingFormat}_${session}_error`, (event , errorParams)=>{
             // remove counter listener
             console.log(`Error detected`)
+            console.log(errorParams)
             this.ipcRenderer.removeListener(`uploadFileStatus_${uploadingFormat}_${session}_counter`, listener)
             onUploadError()
         })

@@ -1,5 +1,6 @@
 import React from 'react'
 import 'semantic-ui-css/semantic.min.css'
+import io from 'socket.io-client';
 import { Sidebar , Segment , Menu , Icon , Button, Form, Radio} from 'semantic-ui-react';
 import { Modal } from 'react-bootstrap'
 import * as moment from 'moment';
@@ -20,6 +21,9 @@ import { ThemeProvider } from 'styled-components';
 import { lightTheme, darkTheme } from './theme';
 import { GlobalStyles } from './global';
 
+import * as firebase from 'firebase/app';
+import "firebase/auth";
+
 import {
   BrowserRouter as Router,
   Switch,
@@ -35,7 +39,9 @@ function App(){
   const [ freeze , setFreeze ] = React.useState(false)
   const [ freezeMessage , setFreezeMessage ] = React.useState("Loading...")
   const [ freezeProgress , setFreezeProgress ] = React.useState(null)
+  const [ email , setEmail ] = React.useState('')
   const [ licenseValid , setLicenseValid ] = React.useState(null)
+  const [ expiredDate , setExpiredDate ] = React.useState(null)
   const [ errorMessage , setErrorMessage ] = React.useState(null)
   const [ infoMessage , setInfoMessage ] = React.useState(null)
   const [ tables, setTables ] = React.useState([])
@@ -56,6 +62,13 @@ function App(){
   const [ showTableSelection , setShowTableSelection ] = React.useState({show:false,callback:null})
   const [ project , setProject ] = React.useState(null)
   const [ projectConfig , setProjectConfig ] = React.useState(null)
+  const [ defaultSetting , setDefaultSetting ] = React.useState(null)
+  const [ appStatus , setAppStatus ] = React.useState('')
+  const [ authenticated , setAuthenticated ] = React.useState(false)
+  const [ databaseBusy , setDatabaseBusy ] = React.useState(false)
+
+  const db = new Database()
+
 
   const setFreezing = (show , message = "Loading..." , progress = null) => {
     setFreeze(show)
@@ -66,6 +79,7 @@ function App(){
   const updateLicenseFromLocal = () => {
     let expired = localStorage.getItem('expired')
       if(expired !== null){
+        setExpiredDate(expired)
         if(moment(expired, "YYYY-MM-DD").diff(moment(),'days') >= 0){
           setLicenseValid(expired)
         }else{
@@ -73,11 +87,19 @@ function App(){
         }
       }else{
         setLicenseValid(null)
+        setExpiredDate(null)
       }
     
     let _project = localStorage.getItem("project")
     if(_project !== null){
       setProject(_project)
+    }
+
+    let _email = localStorage.getItem("email")
+    if(_email !== null){
+      setEmail(_email)
+    }else{
+      setEmail("")
     }
   }
 
@@ -117,6 +139,11 @@ function App(){
       setProjectConfig(JSON.parse(_projectConfig))
     }
 
+    let _defaultSetting = localStorage.getItem("defaultsetting")
+    if(_defaultSetting !== null){
+      setDefaultSetting(JSON.parse(_defaultSetting))
+    }
+
     let _uploadingHeader = localStorage.getItem('uploadingHeader')
     let _useAliasColumn = localStorage.getItem('useAliasColumn')
     let _alias = localStorage.getItem('alias')
@@ -127,7 +154,6 @@ function App(){
       setObjectDate({object:_object,date:_date})
     }
 
-    console.log(_alias === undefined)
     setUploadingOptions({
       alias: (_alias === null || _alias === undefined) ? uploadingOptions.alias : JSON.parse(_alias),
       useAliasColumn: (_useAliasColumn === null || _useAliasColumn === undefined) ? uploadingOptions.useAliasColumn : JSON.parse(_useAliasColumn),
@@ -136,7 +162,6 @@ function App(){
   }
 
   const updateTables = () => {
-    let db = new Database()
     return db.query(`SELECT name FROM sqlite_master WHERE type='table' and name != 'sqlite_sequence'`).then((response)=>{
       if(response.status === 'Ok'){
         setTables(response.result.map(row => row.name))
@@ -144,14 +169,145 @@ function App(){
       }
     })
   }
+  
+  // Authenticate with online server 
+  React.useEffect(() => {
+    if( !!email && !!project && !!expiredDate){
+      if(moment(expiredDate, "YYYY-MM-DD").diff(moment(),'days') >= 0 ){
+        if(firebase.auth().currentUser === null){
+          firebase.auth().signInAnonymously().then(() => {
+            setAppStatus('Authentication success')
+            setAuthenticated(true)
+          }).catch((err) => {
+            setAppStatus('Authentication failed')
+            setAuthenticated(false)
+          })
+        }else{
+          // user is already sign in
+          setAuthenticated(true)
+        }
+      }else{
+        if(firebase.auth().currentUser !== null){
+          firebase.auth().signOut()
+          setAuthenticated(false)
+        }
+      }
+    }else{
+      if(firebase.auth().currentUser !== null){
+        firebase.auth().signOut()
+        setAuthenticated(false)
+      }
+    }
+  } , [email , project , expiredDate])
+
+  // Sync database from online
+  const syncDatabase =  () => {
+    console.log(`Check local database and sync with online database`)
+    setDatabaseBusy(true)
+    let currentUser = firebase.auth().currentUser
+    currentUser.getIdToken().then(async (token) => {
+      const checkRange = new Array(moment().diff(moment('2020-05-22'), 'days')).fill(0).map((val , ind) => moment('2020-05-22').startOf("days").add(ind , 'days').format('YYYY-MM-DD HH:mm:ss'))
+      const socket = io('http://localhost:8080')
+      for(let i  = 0 ; i < main.length ; i ++){
+        let rangeDate = await db.query(`SELECT DISTINCT [date] as date FROM ${main[i]} WHERE date between '2020-05-22' and  '${moment().subtract(1 , "days").endOf("days")}' ORDER BY [date]`)
+        if(rangeDate.status === 'Ok'){
+          rangeDate = rangeDate.result.map(row => row.date)
+          // Find missing date 
+          let missingRange  = checkRange.filter(date => !rangeDate.includes(date))
+          if(missingRange.length > 0){ // update missing range from online database
+            //console.log(`Update ${main[i]} for range [${missingRange.join(" , ")}]`)
+            let syncProgress = 0/missingRange.length
+            setAppStatus(`Sync ${main[i]} [${(syncProgress*100).toFixed(0)}%]`)
+            for(let j = 0 ; j < missingRange.length ; j++){
+              let promise = new Promise((resolve) => {
+                socket.on("syncdatafail", (data) => {
+                  console.log(data)
+                  socket.off("syncdatafail")
+                  socket.off("syncdatasuccess")
+                  resolve()
+                })
+      
+                socket.on("syncdatasuccess", (data) => {
+                  console.log(`Received new data from online database for ${main[i]} table for date ${missingRange[j]}. Data Count: ${data.data.length}`)
+                  socket.off("syncdatasuccess")
+                  socket.off("syncdatafail")
+                  if(data.data.length > 0){
+                    let columns = Object.keys(data.data[0]).filter(key => key !== 'ID')
+                    let values = data.data.map(row => {
+                      return ` ( ${columns.map(col => typeof row[col] === 'number' ? row[col] : `'${row[col]}'`).join(" , ")} ) `
+                    })
+                    db.update(`INSERT INTO ${main[i]} ( ${columns.join(" , ")} ) VALUES ${values.join(" , ")}`).then((response) => {
+                      if(response.status === 'Ok'){
+                        console.log(`Successfully update new data from online database into local ${main[i]} table for date ${missingRange[j]}. Data Count: ${data.data.length}`)
+                      }else{
+                        console.log(`Fail to update new data from online database into local ${main[i]} table for date ${missingRange[j]}. Data Count: ${data.data.length}`)
+                      }
+
+                      resolve()
+                    })
+                  }else{
+                    resolve()
+                  }
+                })
+                
+                console.log(`Send request to get online data for ${main[i]} table for date ${missingRange[j]}.`)
+                socket.emit("sync", [missingRange[j]] , main[i] , token, currentUser.uid)
+              })
+              syncProgress = (j+1)/missingRange.length;
+              setAppStatus(`Sync ${main[i]} [${(syncProgress*100).toFixed(0)}%]`)
+              await promise
+            }
+            
+            
+          }else{
+            console.log(missingRange)
+          }
+          
+          //console.log(checkRange)
+        }
+        
+      }
+
+      socket.disconnect()
+      setAppStatus(`Sync done`)
+      setDatabaseBusy(false)
+    })
+    
+  }
+
+  //let updateOnlineDatabaseInterval = null
+  const [ updateOnlineDatabaseInterval , setUpdateOnlineDatabaseInterval ] = React.useState(null)
+  React.useEffect(() => {
+    if(!!expiredDate && !!project && authenticated){
+      if(moment(expiredDate, "YYYY-MM-DD").diff(moment(),'days') >= 0 && main.length > 0){
+        if(updateOnlineDatabaseInterval === null){
+          setUpdateOnlineDatabaseInterval(setInterval(syncDatabase , 900000))
+          syncDatabase();
+        }else{
+          console.log(`Skip set interval`)
+        }
+      }else if(updateOnlineDatabaseInterval !== null){
+        console.log('clear interval due to license expired')
+        clearInterval(updateOnlineDatabaseInterval)
+        setUpdateOnlineDatabaseInterval(null)
+        updateOnlineDatabaseInterval = null
+      }
+    }else if(updateOnlineDatabaseInterval !== null){
+      console.log('clear interval due to setting incomplete / user is not authenticated')
+      clearInterval(updateOnlineDatabaseInterval)
+      setUpdateOnlineDatabaseInterval(null)
+      updateOnlineDatabaseInterval = null
+    }
+  }, [project , expiredDate , main , updateOnlineDatabaseInterval, authenticated])
 
   React.useEffect(()=>{
     // update license if application goes online
     updateRegisterListenWhenOnline((setting)=>{
       console.log(`Sync license and project setting from online`)
-      console.log(setting)
-      let { expired , project }  = setting
-      if(expired !== null && expired !== undefined){
+      let { expired , project , email }  = setting
+      if(expired !== null && expired !== undefined && email !== ''){
+        setEmail(email)
+        setExpiredDate(expired)
         if(moment(expired, "YYYY-MM-DD").diff(moment(),'days') >= 0){
           setLicenseValid(expired)
         }else{
@@ -167,10 +323,9 @@ function App(){
 
       
 
-      let { main , uploadingFormat , sitelevel , celllevel , sectorlevel , uploadingHeader , useAliasColumn , alias , object , date, projectConfig } = setting
+      let { main , uploadingFormat , sitelevel , celllevel , sectorlevel , uploadingHeader , useAliasColumn , alias , object , date, projectConfig , defaultsetting } = setting
       if( main !== null && main !== undefined){
         setSelectedTable(main.filter(table => tables.includes(table)).length > 0 ? main.filter(table => tables.includes(table))[0] : null)
-        console.log(`Update main to ${main.join(" , ")}`)
         setMain(main)
       }
 
@@ -196,8 +351,11 @@ function App(){
       }
 
       if(projectConfig !== null && projectConfig !== undefined){
-        console.log(projectConfig)
         setProjectConfig(projectConfig)
+      }
+
+      if(defaultsetting !== null){
+        setDefaultSetting(defaultsetting)
       }
 
       setUploadingOptions({
@@ -206,19 +364,21 @@ function App(){
         uploadingHeader: (uploadingHeader === null || uploadingHeader === undefined) ? uploadingOptions.uploadingHeader : parseInt(uploadingHeader)
       })
       
+      
+    }, () => {
+      // Get latest config into app context 
+      updateAppContextFromLocal()
     })
 
     // default read license from local
     updateLicenseFromLocal()
 
-    // Get latest config into app context 
-    updateAppContextFromLocal()
+    
     
     // create main database if don't have and query all available table
     updateTables()
 
     // Listen to update
-    let db = new Database()
     db.listenAvailableUpdate().then(() => {
       // Prompt user to download or reject
       setUpdateAvaible(true)
@@ -241,7 +401,6 @@ function App(){
           }, 
           selectedTable:selectedTable,
           setSelectedTable:setSelectedTable,
-          //showTableSelection: showTableSelection, 
           main:main, 
           uploadingFormat:uploadingFormat, 
           uploadingOptions:uploadingOptions,
@@ -251,12 +410,20 @@ function App(){
           celllevel:celllevel,
           sectorlevel:sectorlevel, 
           theme: 'dark', 
-          projectConfig: projectConfig
+          projectConfig: projectConfig, 
+          licenseValid: licenseValid,
+          expiredDate: expiredDate,
+          project: project, 
+          email: email, 
+          defaultSetting: defaultSetting,
+          setAppStatus: setAppStatus,
+          databaseBusy: databaseBusy,
+          setDatabaseBusy: setDatabaseBusy,
         }}>
         <Router>
           <FreezeProvider value={{setFreeze:setFreezing}}>
             <FreezeModal hide={freeze} message={freezeMessage} value={freezeProgress}/>
-            <Sidebar.Pushable  dimmed={true}>
+            <Sidebar.Pushable>
               <Sidebar as={Menu} animation="overlay" direction="left" visible={sidebarVisible} vertical width='thin' inverted>
                 <Menu.Item style={{height: '40px'}} onClick={()=>setSidebarVisible(false)}>
                   <Icon name="angle left" />
@@ -308,10 +475,18 @@ function App(){
                         </Route>
                       </Switch>
                     </div>
+                    
                   </Segment>
                 </ToastProvider>
               </Sidebar.Pusher>
             </Sidebar.Pushable>
+            <div style={{height: '18px', backgroundColor: '#ececec', display: 'flex', position: 'absolute' , bottom: '0px', width: '100vw', padding: '0px 10px'}}>
+              <div style={{flexGrow: 1}}></div>
+              <div style={{fontSize: '0.8em', color: 'gray'}}>
+                {appStatus}
+              </div>
+            </div>
+            
             <MainSelection show={showTableSelection.show} closed={showTableSelection.callback} onHide={()=>{setShowTableSelection({show:false,callback:null})}} tables={main.filter(table => tables.includes(table))} selected={selectedTable} onSelectionChange={(table)=>setSelectedTable(table)}/>
           
             <Snackbar 
@@ -326,7 +501,6 @@ function App(){
                 <>
                   <MaterialButton color="primary" size="small" onClick={()=>{
                     // Send download Update
-                    let db = new Database()
                     db.downloadUpdate()
                     setUpdateAvaible(false)
                   }}>Download</MaterialButton>
@@ -349,7 +523,6 @@ function App(){
                 <>
                   <MaterialButton color="primary" size="small" onClick={()=>{
                     // Send download Update
-                    let db = new Database()
                     db.quitAndInstall()
                     setUpdateDownloaded(false)
                   }}>Quit & Install</MaterialButton>
@@ -363,6 +536,8 @@ function App(){
           </FreezeProvider>
           
         </Router>
+        
+
       </AppProvider>
     </div>
   </ThemeProvider>

@@ -7,6 +7,7 @@ const { autoUpdater } = require("electron-updater");
 const csv = require('csv-parser')
 //const express = require('express')
 const machineId = require('node-machine-id').machineId
+const csvImporter = require("./import-csv-sqlite.js");
 
 let mainWindow
 let spawnProcess = []
@@ -63,7 +64,7 @@ function createWindow() {
     mainWindow.removeMenu()
     mainWindow.setMenu(null)
 
-    // mainWindow.webContents.openDevTools({mode:'bottom'})
+    mainWindow.webContents.openDevTools({mode:'bottom'})
     autoUpdater.autoDownload = false
     //autoUpdater.setFeedURL('https://storage.googleapis.com/rfoss/')
     autoUpdater.checkForUpdatesAndNotify();
@@ -156,6 +157,45 @@ ipcMain.on(`uploadFileStatus_csv`, (event,arg) => {
     }).then((dialogResult)=>{
         if(!dialogResult.canceled){
             let filePaths = dialogResult.filePaths;
+            //let rowNum = 1
+            let headerRow = arg.options.uploadingHeader
+            let headerCol = arg.options.alias[arg.tablename]
+            let tablename = arg.tablename
+
+            let _csvImporter = new csvImporter(defaultDbPath , true)
+
+            _csvImporter.on("ready", () =>{
+                event.sender.send('uploadFileStatus_csv_'+arg.session+'_start')
+                _csvImporter.uploadCsv(filePaths[0], headerRow , headerCol, tablename)
+            })
+
+            _csvImporter.on("error", (err) => {
+                event.sender.send(`uploadFileStatus_csv_${arg.session}_error` , err)
+            })
+
+            _csvImporter.on("progress" , (status) => {
+                event.sender.send(`uploadFileStatus_csv_${arg.session}_counter`, status)
+                console.log(status)
+            })
+
+            _csvImporter.on("done", () => {
+                event.sender.send(`uploadFileStatus_csv_${arg.session}`)
+            })
+        }
+    })
+})
+
+//ipcMain.on(`uploadFileStatus_csv`, (event,arg) => {
+ipcMain.on(`uploadFileStatus_csv_debugging`, (event,arg) => {
+    dialog.showOpenDialog({
+        filters: [
+            //{name: "All Files", extensions: ["*"]},
+            {name: 'CSV',extensions: ['csv']}
+        ],
+        properties: ['openFile']
+    }).then((dialogResult)=>{
+        if(!dialogResult.canceled){
+            let filePaths = dialogResult.filePaths;
             let rowNum = 1
             let headerRow = arg.options.uploadingHeader
             let headerCol = arg.options.alias[arg.tablename]
@@ -221,8 +261,8 @@ ipcMain.on(`uploadFileStatus_csv`, (event,arg) => {
                                                     console.log("Upload table not existed. Creating new table")
                                                     let configHeader = Object.entries(headerCol).map(([key , col]) => {
                                                         let val = uploadData[0][col]
-                                                        console.log(`${val} | type [${typeof val}] | is date [${moment(val, "YYYY-MM-DD HH:mm:ss", true).isValid() || moment(val, "MM/DD/YYYY HH:mm", true).isValid()}] [${moment(val, "M/DD/YYYY H:mm", true).isValid()}]`)
-                                                        if(val.match(/(?<percentage>\d{1,}\.\d{2})%/,'i')){
+                                                        //console.log(`${val} | type [${typeof val}] | is date [${moment(val, "YYYY-MM-DD HH:mm:ss", true).isValid() || moment(val, "MM/DD/YYYY HH:mm", true).isValid()}] [${moment(val, "M/DD/YYYY H:mm", true).isValid()}]`)
+                                                        if(val.match(/(?<percentage>\d{1,}\.?\d*)%/,'i')){
                                                             return [key , 'REAL']
                                                         }else if(!isNaN(val)){
                                                             return [key , 'REAL']
@@ -238,6 +278,7 @@ ipcMain.on(`uploadFileStatus_csv`, (event,arg) => {
                                                     db.exec(`CREATE TABLE ${arg.tablename} ( ID INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL , ${configHeader.map(val => val.join(" ")).join(" , ")} )`, (err)=>{
                                                         if(err){ 
                                                             console.log(`CREATE TABLE ${arg.tablename} ( ID INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL , ${configHeader.map(val => val.join(" ")).join(" , ")} )`)
+                                                            console.log(err)
                                                             reject(new Error('Upload fail. Unable to create new table'))
                                                         }else{
                                                             console.log(`New table created`)
@@ -269,8 +310,10 @@ ipcMain.on(`uploadFileStatus_csv`, (event,arg) => {
                                 let uploadCol = Object.values(headerCol)
                                 let uploadInsert = uploadData.map(row => ` (${uploadCol.map(col => {
                                     let val = row[col]
-                                    if(val.match(/(?<percentage>\d{1,}\.\d{2})%/,'i')){
-                                        return parseFloat(val.match(/(?<percentage>\d{1,}\.\d{2})%/,'i').groups.percentage)
+                                    if(val === ""){
+                                        return `null`
+                                    }else if(val.match(/(?<percentage>\d{1,}\.?\d*)%/,'i')){
+                                        return parseFloat(val.match(/(?<percentage>\d{1,}\.?\d*)%/,'i').groups.percentage)
                                     }else if(!isNaN(val)){
                                         return parseFloat(val)
                                     }else if(moment(val, "YYYY-MM-DD HH:mm:ss", true).isValid()){
@@ -305,8 +348,10 @@ ipcMain.on(`uploadFileStatus_csv`, (event,arg) => {
                             let uploadCol = Object.values(headerCol)
                             let uploadInsert = uploadData.map(row => ` (${uploadCol.map(col => {
                                 let val = row[col]
-                                if(val.match(/(?<percentage>\d{1,}\.\d{2})%/,'i')){
-                                    return parseFloat(val.match(/(?<percentage>\d{1,}\.\d{2})%/,'i').groups.percentage)
+                                if(val === ""){
+                                    return `null`
+                                }else if(val.match(/(?<percentage>\d{1,}\.?\d*)%/,'i')){
+                                    return parseFloat(val.match(/(?<percentage>\d{1,}\.?\d*)%/,'i').groups.percentage)
                                 }else if(!isNaN(val)){
                                     return parseFloat(val)
                                 }else if(moment(val, "YYYY-MM-DD HH:mm:ss", true).isValid()){
@@ -319,17 +364,21 @@ ipcMain.on(`uploadFileStatus_csv`, (event,arg) => {
                             }).join(" , ")} )`)
 
                             dbC.exec(`INSERT INTO ${arg.tablename} ( ${uploadKey.join(" , ")}) VALUES ${uploadInsert.join(" , ")}`, (err)=>{
-                                if(err){
+                                if(!!err){
                                     error += uploadInsert.length;
+                                    console.log(err)
                                 }else{
                                     success += uploadInsert.length;
                                 }
                                 totalUpload += uploadInsert.length;
                                 uploadData = []
                                 event.sender.send(`uploadFileStatus_csv_${arg.session}_counter`, {progress:parseFloat((totalUpload/totalRows).toFixed(2))})
+                                console.log(`Upload done status: Sucess ${success} Error ${error} Total ${totalUpload}`)
                                 csvStream.resume()
                             
                             })
+                            //console.log(`INSERT INTO ${arg.tablename} ( ${uploadKey.join(" , ")}) VALUES ${uploadInsert.join(" , ")}`)
+                            
                             event.sender.send(`uploadFileStatus_csv_${arg.session}`)
                         })
                 })  

@@ -1,5 +1,6 @@
 import React from 'react';
 import "./AntennaSwapReport.css";
+import PropTypes  from 'prop-types';
 
 import { Form , Button , Tab, Table, TableHeaderCell, Icon, Menu} from 'semantic-ui-react';
 import { Overlay } from 'react-bootstrap';
@@ -18,7 +19,17 @@ import HighchartsExporting from 'highcharts/modules/exporting';
 
 HighchartsExporting(Highcharts)
 
-
+/**
+ * Pivoting array of data in object format to data table
+ * @param {Array} data Array of data object with key
+ * @param {String|Array} key Pivot rows by key
+ * @param {String|Array} category Grouping by category
+ * @param {String|Array} val Array or string of formulas or counters
+ * @param {Array} [filter] 
+ * @param {Function} [keyFormat] 
+ * 
+ * @returns {Array} Data Table in two dimensional rows x columns
+ */
 const pivot = (data, key, category, val, filter = [], keyFormat = null) => {
     // filter data 
     if(filter.length > 0){
@@ -44,7 +55,6 @@ const pivot = (data, key, category, val, filter = [], keyFormat = null) => {
         ).flatMap(val => val) : Array.from(val.matchAll(/(?<agg>\w+)\((?<counter>\w+)\)/g)).map(matched => matched.groups.counter)
 
     variable = Array.from(new Set(variable))
-    //console.log(Array.from(new Set(variable)))
     data = data.reduce((newdata, row) => {
       let existing = typeof category !== 'string' ? newdata.find(_row => _row[key] === row[key]) : newdata.find(_row => _row[key] === row[key] && _row[category] == row[category])
       if(existing){
@@ -64,7 +74,7 @@ const pivot = (data, key, category, val, filter = [], keyFormat = null) => {
       }
       return newdata
     },[])
-
+    //console.log(data)
     // performed agg average
     let variableAvg = Array.from(new Set(Array.isArray(val) ? val.map(formula => Array.from(formula.matchAll(/avg\((?<counter>\w+)\)/g)).map(matched => matched.groups.counter)
     ).flatMap(val => val) : Array.from(val.matchAll(/avg\((?<counter>\w+)\)/g)).map(matched => matched.groups.counter)))
@@ -110,11 +120,16 @@ const pivot = (data, key, category, val, filter = [], keyFormat = null) => {
     return table
 }
 
+/**
+ * Antenna swap reporting - customize for digi ericsson antenna swap version 2020
+ * @component  
+ */
 function AntennaSwapReport(){
     let db = new Database()
 
     // App context
     const appContext = React.useContext(AppContext)
+
     // Freeze context
     const freezeContext = React.useContext(FreezeContext)
 
@@ -143,11 +158,14 @@ function AntennaSwapReport(){
     const [ exportedRaw2G , setExportedRaw2G ] = React.useState([])
     const [ exportedRaw3G , setExportedRaw3G ] = React.useState([])
     const [ exportedRaw4G , setExportedRaw4G ] = React.useState([])
+    const [ lockOperation , setLockOperation ] = React.useState(false)
 
     // Reference
     const moreTarget = React.useRef(null)
 
-
+    /**
+     * Load 2G Chart Config from 'antennaswap2g' table
+     */
     const load2GChartConfig = () => {
         let query = db.query(`SELECT antennaswap2g.ID , antennaswap2g.title  , antennaswap2g.formatting , antennaswap2g.formulaid , formulas.name , formulas.formula , formulas.tablename , antennaswap2g.grouplevel FROM antennaswap2g LEFT JOIN formulas ON antennaswap2g.formulaid = formulas.ID`)
         return query.then((response)=>{
@@ -161,6 +179,9 @@ function AntennaSwapReport(){
         })
     }
 
+    /**
+     * Load 3G Chart Config from 'antennaswap3g' table
+     */
     const load3GChartConfig = () => {
         let query = db.query(`SELECT antennaswap3g.ID , antennaswap3g.title  , antennaswap3g.formatting , antennaswap3g.formulaid , formulas.name , formulas.formula , formulas.tablename , antennaswap3g.grouplevel FROM antennaswap3g LEFT JOIN formulas ON antennaswap3g.formulaid = formulas.ID`)
         return query.then((response)=>{
@@ -174,6 +195,9 @@ function AntennaSwapReport(){
         })
     }
 
+    /**
+     * Load 4G Chart Config from 'antennaswap4g' table
+     */
     const load4GChartConfig = () => {
         let query = db.query(`SELECT antennaswap4g.ID , antennaswap4g.title  , antennaswap4g.formatting , antennaswap4g.formulaid , formulas.name , formulas.formula , formulas.tablename , antennaswap4g.grouplevel FROM antennaswap4g LEFT JOIN formulas ON antennaswap4g.formulaid = formulas.ID`)
         return query.then((response)=>{
@@ -187,6 +211,9 @@ function AntennaSwapReport(){
         })
     }
 
+    /**
+     * Load traffic blended KPI from 'antennaswapblended' table
+     */
     const loadBlendedChartConfig = () => {
         let query = db.query(`SELECT antennaswapblended.ID , antennaswapblended.title  , antennaswapblended.formulaid , formulas.name , formulas.formula , formulas.tablename FROM antennaswapblended LEFT JOIN formulas ON antennaswapblended.formulaid = formulas.ID`)
         return query.then((response)=>{
@@ -200,6 +227,9 @@ function AntennaSwapReport(){
         })
     }
 
+    /**
+     * Load 2G, 3G, 4G and blended KPI after component mounted
+     */
     React.useEffect(()=>{
         load2GChartConfig().then((config) => {
             setConfig2G(config)
@@ -243,6 +273,10 @@ function AntennaSwapReport(){
         })
     },[])
 
+    React.useEffect(()=>{
+        setLockOperation(appContext.databaseBusy)
+    }, [appContext.databaseBusy])
+
     const queryAction = async () => {
         let _kpiTable = []
         freezeContext.setFreeze(true , "Querying... ")
@@ -258,7 +292,7 @@ function AntennaSwapReport(){
                 }
             }
         }
-        let query2g = await db.query(`SELECT ${appContext.objectDate.date} as date , ${appContext.celllevel} as cell, ${counters2g.join(" , ")} FROM RAW2G WHERE ( [${appContext.objectDate.date}] between '${startDate}' and  '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:mm:ss")}' ) and ( ${sites.split(";").map(site => `${appContext.objectDate.object} LIKE '${site}%'`).join(" or ")} )`)
+        let query2g = await db.query(`SELECT ${appContext.objectDate.date} as date , ${appContext.celllevel} as cell, ${counters2g.join(" , ")} FROM RAW2G WHERE ( [${appContext.objectDate.date}] between '${startDate}' and  '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:mm:ss")}' ) and ( ${sites.split(";").map(site => `${appContext.objectDate.object} LIKE '${site}%'`).join(" or ")} ) ORDER BY ${appContext.objectDate.date}`)
     
         freezeContext.setFreeze(true , "Querying 2G KPI ...")
         if(query2g.status === 'Ok'){
@@ -403,7 +437,7 @@ function AntennaSwapReport(){
             }
         }
 
-        let query3g = await db.query(`SELECT ${appContext.objectDate.date} as date , ${appContext.celllevel} as cell, ${counters3g.join(" , ")} FROM RAW3G WHERE ( [${appContext.objectDate.date}] between '${startDate}' and  '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:mm:ss")}' ) and ( ${sites.split(";").map(site => `${appContext.objectDate.object} LIKE '${site}%'`).join(" or ")} )`)
+        let query3g = await db.query(`SELECT ${appContext.objectDate.date} as date , ${appContext.celllevel} as cell, ${counters3g.join(" , ")} FROM RAW3G WHERE ( [${appContext.objectDate.date}] between '${startDate}' and  '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:mm:ss")}' ) and ( ${sites.split(";").map(site => `${appContext.objectDate.object} LIKE '${site}%'`).join(" or ")} )  ORDER BY ${appContext.objectDate.date}`)
 
         if(query3g.status === 'Ok'){
             let rawdata3g = query3g.result.map(row => {
@@ -559,11 +593,11 @@ function AntennaSwapReport(){
                 }
             }
         }
-        console.log(counters4g)
-        let query4g = await db.query(`SELECT ${appContext.objectDate.date} as date , ${appContext.celllevel} as cell, ${counters4g.join(" , ")} FROM RAW4G WHERE ( [${appContext.objectDate.date}] between '${startDate}' and  '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:mm:ss")}' ) and ( ${sites.split(";").map(site => `${appContext.objectDate.object} LIKE '${site}%'`).join(" or ")} )`)
-        console.log(`SELECT ${appContext.objectDate.date} as date , ${appContext.celllevel} as cell, ${counters4g.join(" , ")} FROM RAW4G WHERE ( [${appContext.objectDate.date}] between '${startDate}' and  '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:mm:ss")}' ) and ( ${sites.split(";").map(site => `${appContext.objectDate.object} LIKE '${site}%'`).join(" or ")} )`)
+        //console.log(counters4g)
+        let query4g = await db.query(`SELECT ${appContext.objectDate.date} as date , ${appContext.celllevel} as cell, ${counters4g.join(" , ")} FROM RAW4G WHERE ( [${appContext.objectDate.date}] between '${startDate}' and  '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:mm:ss")}' ) and ( ${sites.split(";").map(site => `${appContext.objectDate.object} LIKE '${site}%'`).join(" or ")} )  ORDER BY ${appContext.objectDate.date}`)
+        //console.log(`SELECT ${appContext.objectDate.date} as date , ${appContext.celllevel} as cell, ${counters4g.join(" , ")} FROM RAW4G WHERE ( [${appContext.objectDate.date}] between '${startDate}' and  '${moment(endDate).endOf('day').format("YYYY-MM-DD HH:mm:ss")}' ) and ( ${sites.split(";").map(site => `${appContext.objectDate.object} LIKE '${site}%'`).join(" or ")} )`)
         if(query4g.status === 'Ok'){
-            console.log(query4g.result.slice())
+            //console.log(query4g.result.slice())
             let rawdata4g = query4g.result.map(row => {
                 // split to site 
                 //console.log(row['object'])
@@ -573,14 +607,13 @@ function AntennaSwapReport(){
                 row['date'] = moment(row['date']).format("YYYY-MM-DD")
                 
                 counters4g.forEach(field => {
-                    if(typeof row[field] === 'string'){
+                    if(typeof row[field] === 'string' && row[field].match(/(,\d{3})+/)){
                         row[field] = parseFloat(row[field].replace(/,/g, ""))
                     }
                 })
                 
                 return row
             })
-            console.log(rawdata4g.slice())
 
             const layerDefinition = {
                 1: 'L26',
@@ -612,7 +645,6 @@ function AntennaSwapReport(){
                 data: layers.flatMap(eachLayer => eachLayer.data)
             })
             //setData4g(layers)
-
             let charts4g = layers.map(({layer , data}) => {
 
                 let charts = config4g.map((config, index) => {
@@ -696,21 +728,23 @@ function AntennaSwapReport(){
 
             
             _kpiTable.push(...layers.map(eachlayer => {
+                //console.log(`KPI Layer : ${eachlayer.layer}`)
+                //console.log(eachlayer.data.slice())
+                //console.log('Generate output formula')
+                //console.log(config4g.map(config => config.formatting === 'percentage' ? `100*(${config.formula})`:config.formula))
                 return {
                     name: `LTE ${eachlayer.layer}`, 
                     table:pivot(eachlayer.data.slice(), 'sector', config4g.map(config => config.title) ,  config4g.map(config => config.formatting === 'percentage' ? `100*(${config.formula})`:config.formula))
                 }}
             ))
-
+            //console.log(_kpiTable)
             setCharts4g(charts4g)
 
             if(appContext.projectConfig){
                 if(appContext.projectConfig.antennaswap){
                     if(appContext.projectConfig.antennaswap.export){
-                        console.log(appContext.projectConfig.antennaswap.export)
                         if(appContext.projectConfig.antennaswap.export.RAW4G){
                             let exportTable = [appContext.projectConfig.antennaswap.export.RAW4G.map(exported => exported.name)]
-                            console.log(rawdata4g)
                             rawdata4g.slice().forEach(row => {
                                 let exportrow = appContext.projectConfig.antennaswap.export.RAW4G.map(exported => {
                                     if(exported.type === 'string'){
@@ -879,7 +913,8 @@ function AntennaSwapReport(){
                 <Table.Body>
                     {tableInfo.table.slice(1).map((tableRow,tableRowIndex)=>
                         <Table.Row key={tableRowIndex}>
-                            {tableRow.map((tableCell,tableCellIndex) => <Table.Cell key={tableCellIndex}>{typeof tableCell === 'number' ? parseFloat(tableCell.toFixed(2)) : tableCell}</Table.Cell>)}
+                            {tableRow.map((tableCell,tableCellIndex) => {
+                                return <Table.Cell key={tableCellIndex}>{typeof tableCell === 'number' ? parseFloat(tableCell.toFixed(2)) : tableCell}</Table.Cell>})}
                         </Table.Row>
                     )}
                     
@@ -914,19 +949,19 @@ function AntennaSwapReport(){
                     ...props
                 }) => (
                     <Menu {...props} style={{...props.style}} vertical pointing={true}>
-                        <Menu.Item name="chart-2g-setting" onClick={()=>{
+                        <Menu.Item name="chart-2g-setting" disabled={lockOperation} onClick={()=>{
                             setChart2GSetting(true)
                             setShowMore(false)
                         }}>2G Chart setting</Menu.Item>
-                        <Menu.Item name="chart-3g-setting" onClick={()=>{
+                        <Menu.Item name="chart-3g-setting" disabled={lockOperation}  onClick={()=>{
                             setChart3GSetting(true)
                             setShowMore(false)
                         }}>3G Chart setting</Menu.Item>
-                        <Menu.Item name="chart-4g-setting" onClick={()=>{
+                        <Menu.Item name="chart-4g-setting" disabled={lockOperation} onClick={()=>{
                             setChart4GSetting(true)
                             setShowMore(false)
                         }}>4G Chart setting</Menu.Item>
-                        <Menu.Item name="chart-blended-setting" onClick={()=>{
+                        <Menu.Item name="chart-blended-setting" disabled={lockOperation}  onClick={()=>{
                             setChartBlendedSetting(true)
                             setShowMore(false)
                         }}>Blended Chart setting</Menu.Item>

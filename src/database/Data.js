@@ -15,280 +15,19 @@ import AppContext from './../module/AppContext';
 function Reset(props){
     const { show , onHide  } = props 
     const appContext = React.useContext(AppContext)
-    const formulaList = [
-        {name:'DL User Throughput(Mbps)',formula:'avg(DL_User_Average_Throughput_Mbps)'},
-        {name:'DL Max Throughput(Mbps)',formula:'avg(Cell_DL_Max_ThroughputtoPDCP_Mbps)'},
-        {name:'Total DL Traffic Volume(GB)',formula:'avg(Total_DL_Traffic_Volume_GB)'},
-        {name:'Avg No. of user',formula:'avg(Avg_No_of_user_number)'},
-        {name:'PRB DL (%)',formula:'avg(PRB_Usage_DL)'},
-        {name:'DL.CAUser.Traffic(GB)',formula:'avg(DL_CAUser_Traffic_GB)'},
-        {name:'Ave CQI',formula:'avg(CQI_Avg)'},
-        {name:'L.Traffic.User.PCell.DL.Avg',formula:'avg(L_Traffic_User_PCell_DL_Avg)'},
-        {name:'L.Traffic.User.SCell.DL.Avg',formula:'avg(L_Traffic_User_SCell_DL_Avg)'},
-        {name:'PDSCH IBLER',formula:'avg(PDSCH_IBLER)'},
-        {name:'DL Edge User TP (Mbps)',formula:'avg(M_DL_Edge_User_Throughput_Mbps)'},
-        {name:'DCR',formula:'avg(ERAB_DCR_MME)'},
-        {name:'HOSR',formula:'avg(HO_Success_Rate)'},
-        {name:'CSFB SR',formula:'avg(CSFB_Preparation_Success_Rate)'},
-        {name:'Avg UL Interference(dBm)',formula:'avg(Avg_UL_Interference_dBm)'},
-        {name:'CSSR',formula:'avg(CSSR)'},
-        {name:'TA (0-78m)%',formula:'sum(L_RA_TA_UE_Index0)/sum(L_RA_TA_UE_0to11)'},
-        {name:'TA (78m-234m)%',formula:'sum(L_RA_TA_UE_Index1)/sum(L_RA_TA_UE_0to11)'},
-        {name:'TA (234m-546m)%',formula:'sum(L_RA_TA_UE_Index2)/sum(L_RA_TA_UE_0to11)'},
-        {name:'TA (546m-1014m)%',formula:'sum(L_RA_TA_UE_Index3)/sum(L_RA_TA_UE_0to11)'},
-        {name:'TA (1014m-1950m)%',formula:'sum(L_RA_TA_UE_Index4)/sum(L_RA_TA_UE_0to11)'},
-        {name:'TA (1950m-3510m)%',formula:'sum(L_RA_TA_UE_Index5)/sum(L_RA_TA_UE_0to11)'},
-        {name:'TA (3510m-6630m)%',formula:'sum(L_RA_TA_UE_Index6)/sum(L_RA_TA_UE_0to11)'},
-        {name:'TA (6630m-14430m)%',formula:'sum(L_RA_TA_UE_Index7)/sum(L_RA_TA_UE_0to11)'},
-        {name:'TA (14430m-30030m)%',formula:'sum(L_RA_TA_UE_Index8)/sum(L_RA_TA_UE_0to11)'},
-        {name:'TA (30030m-53430m)%',formula:'sum(L_RA_TA_UE_Index9)/sum(L_RA_TA_UE_0to11)'},
-        {name:'TA (53430m-76830m)%',formula:'sum(L_RA_TA_UE_Index10)/sum(L_RA_TA_UE_0to11)'},
-        {name:'TA (>76830m)%',formula:'sum(L_RA_TA_UE_Index11)/sum(L_RA_TA_UE_0to11)'},
-        {name:'TA (0-78m)',formula:'sum(L_RA_TA_UE_Index0)'},
-        {name:'TA (78m-234m)',formula:'sum(L_RA_TA_UE_Index1)'},
-        {name:'TA (234m-546m)',formula:'sum(L_RA_TA_UE_Index2)'},
-        {name:'TA (546m-1014m)',formula:'sum(L_RA_TA_UE_Index3)'},
-        {name:'TA (1014m-1950m)',formula:'sum(L_RA_TA_UE_Index4)'},
-        {name:'TA (1950m-3510m)',formula:'sum(L_RA_TA_UE_Index5)'},
-        {name:'TA (3510m-6630m)',formula:'sum(L_RA_TA_UE_Index6)'},
-        {name:'TA (6630m-14430m)',formula:'sum(L_RA_TA_UE_Index7)'},
-        {name:'TA (14430m-30030m)',formula:'sum(L_RA_TA_UE_Index8)'},
-        {name:'TA (30030m-53430m)',formula:'sum(L_RA_TA_UE_Index9)'},
-        {name:'TA (53430m-76830m)',formula:'sum(L_RA_TA_UE_Index10)'},
-        {name:'TA (>76830m)',formula:'sum(L_RA_TA_UE_Index11)'},
-
-    ]
-
-    const ztedigiconfigs = [
-        { 
-            operation: 'Clear all configuration', commands: [
-                'DROP TABLE IF EXISTS formulas',
-                'DROP TABLE IF EXISTS antennaswap2g',
-                'DROP TABLE IF EXISTS antennaswap3g',
-                'DROP TABLE IF EXISTS antennaswap4g', 
-                'DROP TABLE IF EXISTS antennaswapblended',
-                'DROP TABLE IF EXISTS antennaswapblendeddata',
-                'DROP TABLE IF EXISTS ta2gchart',
-                'DROP TABLE IF EXISTS ta3gchart',
-                'DROP TABLE IF EXISTS ta4gchart', 
-            ], status: 'none'
-        },{
-            operation: 'Create default KPI list', commands: [
-                `CREATE TABLE formulas ( ID INTEGER PRIMARY KEY AUTOINCREMENT , name TEXT , formula TEXT , tablename TEXT , singletable INTERGER)`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'Blended_Voice_Traffic'  , 'sum(Total_Traffic_2G)+sum(Traffic_Volumn_CSAMR_Erl)' , 'RAW2G;RAW3G' , 0)`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'GSM_Traffic_Cell'  , 'sum(Total_Traffic_2G)' , 'RAW2G' , 1)`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'GSM_CSSR'  , 'sum(Call_Setup_SR_Num)/sum(Call_Setup_SR_Denom)' , 'RAW2G' , 1)`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'GSM_DCR'  , 'sum(TCH_Drop_Num)/sum(TCH_Drop_Denom)' , 'RAW2G' , 1)`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'UMTS_Traffic'  , 'sum(Traffic_Volumn_CSAMR_Erl)' , 'RAW3G' , 1)`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'UMTS_CSSR_AMR'  , '(sum(CSSR_RRC_Success_Num)/sum(CSSR_RRC_Attempt_Denom))*(sum(CSSR_RAB_Success_Num)/sum(CSSR_RAB_Attempt_Denom))' , 'RAW3G' , 1)`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'UMTS_DCR_AMR'  , 'sum(CS_Drop_RAB_Drop_Num)/sum(CS_Drop_RAB_Release_Denom)' , 'RAW3G' , 1)`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'LTE_PSSR'  , 'avg(PSSR)' , 'RAW4G' , 1)`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'LTE_Intra_HOSR'  , 'avg(IntraInter_HOSR)' , 'RAW4G' , 1)`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'LTE_UL_PDCP_SDU_Loss_Rate'  , 'sum(UL_PDCP_SDU_LossRate)' , 'RAW4G' , 1)`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'LTE_Max_RRC_Connected_User'  , 'sum(Max_RRC_Connected_User)' , 'RAW4G' , 1)`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'LTE_DL_Traffic_Gb' , 'sum(LTE_DL_Traffic_MByte)/1000' , 'RAW4G', 1)`
-                /*`INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'Number_of_TA0' , 'sum(Number_of_TA0)' , 'TA2G' , 1 )`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'Number_of_TA1' , 'sum(Number_of_TA1)' , 'TA2G' , 1 )`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'Number_of_TA2' , 'sum(Number_of_TA2)' , 'TA2G' , 1 )`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'Number_of_TA3' , 'sum(Number_of_TA3)' , 'TA2G' , 1 )`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'Number_of_TA4' , 'sum(Number_of_TA4)' , 'TA2G' , 1 )`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'Number_of_TA5' , 'sum(Number_of_TA5)' , 'TA2G' , 1 )`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'pd_step1_0to234m' , 'sum(pd_step1_0to234m)' , 'TA3G' , 1 )` ,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'pd_step2_234to703m' , 'sum(pd_step2_234to703m)' , 'TA3G' , 1 )` ,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'pd_step3_703to1172m' , 'sum(pd_step3_703to1172m)' , 'TA3G' , 1 )` ,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'pd_step4_1172to1641m' , 'sum(pd_step4_1172to1641m)' , 'TA3G' , 1 )` ,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'pd_step5_1641to2109m' , 'sum(pd_step5_1641to2109m)' , 'TA3G' , 1 )` ,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'pd_step6_2109to2578m' , 'sum(pd_step6_2109to2578m)' , 'TA3G' , 1 )` ,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'pd_step7_2578to3281m' , 'sum(pd_step7_2578to3281m)' , 'TA3G' , 1 )` ,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'report_time_ta_range_0_to_1' , 'sum(report_time_ta_range_0_to_1)' , 'TA4G', 1 )`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'report_time_ta_range_1_to_3' , 'sum(report_time_ta_range_1_to_3)' , 'TA4G', 1 )`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'report_time_ta_range_3_to_5' , 'sum(report_time_ta_range_3_to_5)' , 'TA4G', 1 )`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'report_time_ta_range_5_to_7' , 'sum(report_time_ta_range_5_to_7)' , 'TA4G', 1 )`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'report_time_ta_range_7_to_9' , 'sum(report_time_ta_range_7_to_9)' , 'TA4G', 1 )`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'report_time_ta_range_9_to_11' , 'sum(report_time_ta_range_9_to_11)' , 'TA4G', 1 )`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'report_time_ta_range_11_to_13' , 'sum(report_time_ta_range_11_to_13)' , 'TA4G', 1 )`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'report_time_ta_range_13_to_20' , 'sum(report_time_ta_range_13_to_20)' , 'TA4G', 1 )`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'report_time_ta_range_20_to_27' , 'sum(report_time_ta_range_20_to_27)' , 'TA4G', 1 )`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'report_time_ta_range_27_to_34' , 'sum(report_time_ta_range_27_to_34)' , 'TA4G', 1 )`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'report_time_ta_range_34_to_50' , 'sum(report_time_ta_range_34_to_50)' , 'TA4G', 1 )`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'report_time_ta_range_40_to_50' , 'sum(report_time_ta_range_40_to_50)' , 'TA4G', 1 )`,
-                `INSERT INTO formulas ( name , formula , tablename , singletable ) VALUES ( 'report_time_ta_range_50_to_81' , 'sum(report_time_ta_range_50_to_81)' , 'TA4G', 1 )`,*/
-
-            ], status: 'none'
-        },{
-            operation: 'Create antenna swap chart & reporting', commands: [
-                `CREATE TABLE antennaswap2g ( ID INTEGER PRIMARY KEY AUTOINCREMENT , title TEXT , formulaid INTEGER , grouplevel TEXT, formatting TEXT , FOREIGN KEY (formulaid) REFERENCES formulas(ID))`,
-                `INSERT INTO antennaswap2g ( title , formulaid , grouplevel, formatting ) VALUES ('Traffic Cell' , (SELECT ID FROM formulas where name='GSM_Traffic_Cell') , 'cell' , 'general')`,
-                `INSERT INTO antennaswap2g ( title , formulaid , grouplevel, formatting ) VALUES ('CSSR Cell' , (SELECT ID FROM formulas where name='GSM_CSSR') , 'cell', 'percentage')`,
-                `INSERT INTO antennaswap2g ( title , formulaid , grouplevel, formatting ) VALUES ('DCR Cell' , (SELECT ID FROM formulas where name='GSM_DCR') , 'cell', 'percentage')`,
-                `INSERT INTO antennaswap2g ( title , formulaid , grouplevel, formatting ) VALUES ('CSSR Site' , (SELECT ID FROM formulas where name='GSM_CSSR') , 'site', 'percentage')`,
-                `INSERT INTO antennaswap2g ( title , formulaid , grouplevel, formatting ) VALUES ('DCR Site' , (SELECT ID FROM formulas where name='GSM_DCR') , 'site', 'percentage')`,
-                `CREATE TABLE antennaswap3g ( ID INTEGER PRIMARY KEY AUTOINCREMENT , title TEXT , formulaid INTEGER , grouplevel TEXT, formatting TEXT , FOREIGN KEY (formulaid) REFERENCES formulas(ID))`,
-                `INSERT INTO antennaswap3g ( title , formulaid , grouplevel, formatting ) VALUES ('Traffic Cell' , (SELECT ID FROM formulas where name='UMTS_Traffic') , 'sector', 'general')`,
-                `INSERT INTO antennaswap3g ( title , formulaid , grouplevel, formatting ) VALUES ('CSSR Cell' , (SELECT ID FROM formulas where name='UMTS_CSSR_AMR') , 'sector', 'percentage')`,
-                `INSERT INTO antennaswap3g ( title , formulaid , grouplevel, formatting ) VALUES ('DCR Cell' , (SELECT ID FROM formulas where name='UMTS_DCR_AMR') , 'sector', 'percentage')`,
-                `INSERT INTO antennaswap3g ( title , formulaid , grouplevel, formatting ) VALUES ('CSSR Site' , (SELECT ID FROM formulas where name='UMTS_CSSR_AMR') , 'site', 'percentage')`,
-                `INSERT INTO antennaswap3g ( title , formulaid , grouplevel, formatting ) VALUES ('DCR Site' , (SELECT ID FROM formulas where name='UMTS_DCR_AMR') , 'site', 'percentage')`,
-                `CREATE TABLE antennaswap4g ( ID INTEGER PRIMARY KEY AUTOINCREMENT , title TEXT , formulaid INTEGER , grouplevel TEXT, formatting TEXT , FOREIGN KEY (formulaid) REFERENCES formulas(ID))`, 
-                `INSERT INTO antennaswap4g ( title , formulaid , grouplevel, formatting ) VALUES ('PSSR' , (SELECT ID FROM formulas where name='LTE_PSSR') , 'cell', 'general')`,
-                `INSERT INTO antennaswap4g ( title , formulaid , grouplevel, formatting ) VALUES ('Intra HO SR' , (SELECT ID FROM formulas where name='LTE_Intra_HOSR') , 'cell', 'general')`,
-                `INSERT INTO antennaswap4g ( title , formulaid , grouplevel, formatting ) VALUES ('UL PDCP SDU Loss Rate' , (SELECT ID FROM formulas where name='LTE_UL_PDCP_SDU_Loss_Rate') , 'cell', 'general')`,
-                `INSERT INTO antennaswap4g ( title , formulaid , grouplevel, formatting ) VALUES ('Maximum RRC-Connected User Number' , (SELECT ID FROM formulas where name='LTE_Max_RRC_Connected_User') , 'site', 'general')`,
-                `INSERT INTO antennaswap4g ( title , formulaid , grouplevel, formatting ) VALUES ('DL Data Traffic' , (SELECT ID FROM formulas where name='LTE_DL_Traffic_Gb') , 'cell', 'general')`,
-                `CREATE TABLE antennaswapblended ( ID INTEGER PRIMARY KEY AUTOINCREMENT , title TEXT , formulaid INTEGER , FOREIGN KEY (formulaid) REFERENCES formulas(ID))`,
-                `INSERT INTO antennaswapblended ( title , formulaid ) VALUES ( 'Blended 2G + 3G Voice Traffic (Erl)' , (SELECT ID FROM formulas WHERE name = 'Blended_Voice_Traffic' ))`,
-                `INSERT INTO antennaswapblended ( title , formulaid ) VALUES ( '2G Voice Traffic' , (SELECT ID FROM formulas WHERE name = 'GSM_Traffic_Cell' ))`,
-                `INSERT INTO antennaswapblended ( title , formulaid ) VALUES ( '3G Voice Traffic' , (SELECT ID FROM formulas WHERE name = 'UMTS_Traffic' ))`,
-                `CREATE TABLE antennaswapblendeddata ( ID INTEGER PRIMARY KEY AUTOINCREMENT , title TEXT , formulaid INTEGER , FOREIGN KEY (formulaid) REFERENCES formulas(ID))`,
-                `INSERT INTO antennaswapblendeddata ( title , formulaid) VALUES ('4G DL Data Traffic (GB)' , (SELECT ID FROM formulas where name='LTE_DL_Traffic_Gb'))`,
-            ], status: 'none'
-        }, /*{
-            operation: 'Create TA chart' , commands : [
-                `CREATE TABLE ta2gchart (ID INTEGER PRIMARY KEY AUTOINCREMENT , title TEXT , formulaid INTEGER , FOREIGN KEY (formulaid) REFERENCES formulas(ID))`,
-                `INSERT INTO ta2gchart ( title , formulaid ) VALUES ( 'Number of TA 0', (SELECT ID FROM formulas where name='Number_of_TA0') )`,
-                `INSERT INTO ta2gchart ( title , formulaid ) VALUES ( 'Number of TA 1', (SELECT ID FROM formulas where name='Number_of_TA1') )`,
-                `INSERT INTO ta2gchart ( title , formulaid ) VALUES ( 'Number of TA 2', (SELECT ID FROM formulas where name='Number_of_TA2') )`,
-                `INSERT INTO ta2gchart ( title , formulaid ) VALUES ( 'Number of TA 3', (SELECT ID FROM formulas where name='Number_of_TA3') )`,
-                `INSERT INTO ta2gchart ( title , formulaid ) VALUES ( 'Number of TA 4', (SELECT ID FROM formulas where name='Number_of_TA4') )`,
-                `INSERT INTO ta2gchart ( title , formulaid ) VALUES ( 'Number of TA 5', (SELECT ID FROM formulas where name='Number_of_TA5') )`,
-                `CREATE TABLE ta3gchart (ID INTEGER PRIMARY KEY AUTOINCREMENT , title TEXT , formulaid INTEGER , FOREIGN KEY (formulaid) REFERENCES formulas(ID))`,
-                `INSERT INTO ta3gchart ( title , formulaid ) VALUES ( ' Propagation Delay Step 1 (0,234)m', (SELECT ID FROM formulas where name='pd_step1_0to234m') ) `, 
-                `INSERT INTO ta3gchart ( title , formulaid ) VALUES ( ' Propagation Delay Step 2 (234,703)m', (SELECT ID FROM formulas where name='pd_step2_234to703m') ) `, 
-                `INSERT INTO ta3gchart ( title , formulaid ) VALUES ( ' Propagation Delay Step 3 (703,1172)m', (SELECT ID FROM formulas where name='pd_step3_703to1172m') ) `, 
-                `INSERT INTO ta3gchart ( title , formulaid ) VALUES ( ' Propagation Delay Step 4 (1172,1641)m', (SELECT ID FROM formulas where name='pd_step4_1172to1641m') ) `, 
-                `INSERT INTO ta3gchart ( title , formulaid ) VALUES ( ' Propagation Delay Step 5 (1641,2109)m', (SELECT ID FROM formulas where name='pd_step5_1641to2109m') ) `, 
-                `INSERT INTO ta3gchart ( title , formulaid ) VALUES ( ' Propagation Delay Step 6 (2109,2578)m', (SELECT ID FROM formulas where name='pd_step6_2109to2578m') ) `, 
-                `INSERT INTO ta3gchart ( title , formulaid ) VALUES ( ' Propagation Delay Step 7 (2578,3281)m', (SELECT ID FROM formulas where name='pd_step7_2578to3281m') ) `, 
-                `CREATE TABLE ta4gchart (ID INTEGER PRIMARY KEY AUTOINCREMENT , title TEXT , formulaid INTEGER , FOREIGN KEY (formulaid) REFERENCES formulas(ID))`,
-                `INSERT INTO ta4gchart ( title , formulaid ) VALUES ( 'Report Times of TA Value in the range of 0 to 1 ( 0m to 78m)', (SELECT ID FROM formulas where name='report_time_ta_range_0_to_1') )`,
-                `INSERT INTO ta4gchart ( title , formulaid ) VALUES ( 'Report Times of TA Value in the range of 1 to 3 (78m to 284m)', (SELECT ID FROM formulas where name='report_time_ta_range_1_to_3') )`,
-                `INSERT INTO ta4gchart ( title , formulaid ) VALUES ( 'Report Times of TA Value in the range of 3 to 5 (284m to 390m)', (SELECT ID FROM formulas where name='report_time_ta_range_3_to_5') )`,
-                `INSERT INTO ta4gchart ( title , formulaid ) VALUES ( 'Report Times of TA Value in the range of 5 to 7 (390m to 546m)', (SELECT ID FROM formulas where name='report_time_ta_range_5_to_7') )`,
-                `INSERT INTO ta4gchart ( title , formulaid ) VALUES ( 'Report Times of TA Value in the range of 7 to 9 (546m to 702m)', (SELECT ID FROM formulas where name='report_time_ta_range_7_to_9') )`,
-                `INSERT INTO ta4gchart ( title , formulaid ) VALUES ( 'Report Times of TA Value in the range of 9 to 11 (702m to 858m)', (SELECT ID FROM formulas where name='report_time_ta_range_9_to_11') )`,
-                `INSERT INTO ta4gchart ( title , formulaid ) VALUES ( 'Report Times of TA Value in the range of 11 to 13 (858m to 1014m)', (SELECT ID FROM formulas where name='report_time_ta_range_11_to_13') )`,
-                `INSERT INTO ta4gchart ( title , formulaid ) VALUES ( 'Report Times of TA Value in the range of 13 to 20 (1014m to 1560m)', (SELECT ID FROM formulas where name='report_time_ta_range_13_to_20') )`,
-                `INSERT INTO ta4gchart ( title , formulaid ) VALUES ( 'Report Times of TA Value in the range of 20 to 27 (1560m to 2106m)', (SELECT ID FROM formulas where name='report_time_ta_range_20_to_27') )`,
-                `INSERT INTO ta4gchart ( title , formulaid ) VALUES ( 'Report Times of TA Value in the range of 27 to 34 (1560m to 2652m)', (SELECT ID FROM formulas where name='report_time_ta_range_27_to_34') )`,
-                `INSERT INTO ta4gchart ( title , formulaid ) VALUES ( 'Report Times of TA Value in the range of 34 to 40 (2652m to 3120m)', (SELECT ID FROM formulas where name='report_time_ta_range_34_to_50') )`,
-                `INSERT INTO ta4gchart ( title , formulaid ) VALUES ( 'Report Times of TA Value in the range of 40 to 50 (3120m to 3900m)', (SELECT ID FROM formulas where name='report_time_ta_range_40_to_50') )`,
-                `INSERT INTO ta4gchart ( title , formulaid ) VALUES ( 'Report Times of TA Value in the range of 50 to 81 (3120m to 6318m)', (SELECT ID FROM formulas where name='report_time_ta_range_50_to_81') )`,
-            ], status: 'none'
-        }*/
-    ]
-    const huaweimaxisconfigs = [
-        {
-            operation: 'Clear all configuration', commands: [
-                'DROP TABLE IF EXISTS formulas' ,
-                'DROP TABLE IF EXISTS bhlayer',
-                'DROP TABLE IF EXISTS mrlayerchart',
-                'DROP TABLE IF EXISTS bhmain',
-                'DROP TABLE IF EXISTS mrmainchart',
-                'DROP TABLE IF EXISTS bisectorchart',
-                'DROP TABLE IF EXISTS bisector',
-                'DROP TABLE IF EXISTS tagraph',
-                'DROP TABLE IF EXISTS tagraph2', 
-                'DROP TABLE IF EXISTS tatable', 
-                'DROP TABLE IF EXISTS tatable2',
-                'DROP INDEX IF EXISTS timeobject'
-        ], status:'none'},{
-            operation: 'Create default KPI list', commands:[
-                `CREATE TABLE formulas ( ID INTEGER PRIMARY KEY AUTOINCREMENT , name TEXT , formula TEXT)`, 
-                ...formulaList.map(formula => `INSERT INTO formulas (name , formula) VALUES ( '${formula.name}', '${formula.formula}')`)
-            ], status:'none'
-        }, {
-            operation: 'Create default Bh layer charts', commands: [
-                `CREATE TABLE bhlayer ( ID INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, formulaid INTEGER, FOREIGN KEY (formulaid) REFERENCES formulas(ID) )`,
-                `INSERT INTO bhlayer ( title , formulaid ) VALUES ( 'DL User Throughput(Mbps)' , (SELECT ID FROM formulas WHERE formulas.name = 'DL User Throughput(Mbps)') )`,
-                `INSERT INTO bhlayer ( title , formulaid ) VALUES ( 'Avg No. of user' , (SELECT ID FROM formulas WHERE formulas.name = 'Avg No. of user') )`,
-                `INSERT INTO bhlayer ( title , formulaid ) VALUES ( 'PRB DL (%)' , (SELECT ID FROM formulas WHERE formulas.name = 'PRB DL (%)') )`,
-                `INSERT INTO bhlayer ( title , formulaid ) VALUES ( 'Ave CQI' , (SELECT ID FROM formulas WHERE formulas.name = 'Ave CQI') )`,
-                `INSERT INTO bhlayer ( title , formulaid ) VALUES ( 'PDSCH IBLER' , (SELECT ID FROM formulas WHERE formulas.name = 'PDSCH IBLER') )`,
-                `INSERT INTO bhlayer ( title , formulaid ) VALUES ( 'DL.CAUser.Traffic(GB)' , (SELECT ID FROM formulas WHERE formulas.name = 'DL.CAUser.Traffic(GB)') )`,
-                `INSERT INTO bhlayer ( title , formulaid ) VALUES ( 'DL Max Throughput(Mbps)' , (SELECT ID FROM formulas WHERE formulas.name = 'DL Max Throughput(Mbps)') )`,
-                `INSERT INTO bhlayer ( title , formulaid ) VALUES ( 'L.Traffic.User.PCell.DL.Avg' , (SELECT ID FROM formulas WHERE formulas.name = 'L.Traffic.User.PCell.DL.Avg') )`,
-                `INSERT INTO bhlayer ( title , formulaid ) VALUES ( 'L.Traffic.User.SCell.DL.Avg' , (SELECT ID FROM formulas WHERE formulas.name = 'L.Traffic.User.SCell.DL.Avg') )`,
-                `INSERT INTO bhlayer ( title , formulaid ) VALUES ( 'Total DL Traffic Volume(GB)' , (SELECT ID FROM formulas WHERE formulas.name = 'Total DL Traffic Volume(GB)') )`,
-                `INSERT INTO bhlayer ( title , formulaid ) VALUES ( 'DL Edge User TP (Mbps)' , (SELECT ID FROM formulas WHERE formulas.name = 'DL Edge User TP (Mbps)') )`,
-
-            ], status:'none'
-        }, {
-            operation: 'Create default Bh main charts', commands: [
-                `CREATE TABLE bhmain ( ID INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, formulaid INTEGER, baselinetitle TEXT , baselinevalue REAL , FOREIGN KEY (formulaid) REFERENCES formulas(ID) )`,
-                `INSERT INTO bhmain ( title , formulaid , baselinetitle , baselinevalue ) VALUES ( 'DCR' , (SELECT ID FROM formulas WHERE formulas.name = 'DCR') , 'DCR Baseline' , 2.5 )`,
-                `INSERT INTO bhmain ( title , formulaid , baselinetitle , baselinevalue ) VALUES ( 'CSSR' , (SELECT ID FROM formulas WHERE formulas.name = 'CSSR') , 'CSSR Baseline' , 95 )`,
-                `INSERT INTO bhmain ( title , formulaid , baselinetitle , baselinevalue ) VALUES ( 'HOSR' , (SELECT ID FROM formulas WHERE formulas.name = 'HOSR') , 'HOSR Baseline' , 97 )`,
-                `INSERT INTO bhmain ( title , formulaid , baselinetitle , baselinevalue ) VALUES ( 'CSFB SR' , (SELECT ID FROM formulas WHERE formulas.name = 'CSFB SR') , 'CSFB Baseline' , 98.5)`,
-                `INSERT INTO bhmain ( title , formulaid ) VALUES ( 'Avg UL Interference(dBm)' , (SELECT ID FROM formulas WHERE formulas.name = 'Avg UL Interference(dBm)'))`,
-            ], status:'none'
-        }, {
-            operation: 'Create default Bisector charts', commands: [
-                `CREATE TABLE bisector ( ID INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, formulaid INTEGER, FOREIGN KEY (formulaid) REFERENCES formulas(ID) )`,
-                `INSERT INTO bisector ( title , formulaid ) VALUES ( 'DL User Throughput(Mbps)' , (SELECT ID FROM formulas WHERE formulas.name = 'DL User Throughput(Mbps)') )`,
-                `INSERT INTO bisector ( title , formulaid ) VALUES ( 'Avg No. of user' , (SELECT ID FROM formulas WHERE formulas.name = 'Avg No. of user') )`,
-                `INSERT INTO bisector ( title , formulaid ) VALUES ( 'PRB DL (%)' , (SELECT ID FROM formulas WHERE formulas.name = 'PRB DL (%)') )`,
-                `INSERT INTO bisector ( title , formulaid ) VALUES ( 'Ave CQI' , (SELECT ID FROM formulas WHERE formulas.name = 'Ave CQI') )`,
-            ], status:'none'
-        }, {
-            operation: 'Create default TA charts', commands: [
-                `CREATE TABLE tagraph2 ( ID INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, formulaid INTEGER , seriesname TEXT, FOREIGN KEY (formulaid) REFERENCES formulas(ID))`,
-                `INSERT INTO tagraph2 ( title , formulaid , seriesname ) VALUES ( '(0-78m)' , (SELECT ID FROM formulas WHERE formulas.name = 'TA (0-78m)') , 'TA (0-78m)' )`,
-                `INSERT INTO tagraph2 ( title , formulaid , seriesname ) VALUES ( '(78m-234m)' , (SELECT ID FROM formulas WHERE formulas.name = 'TA (78m-234m)') , 'TA (78m-234m)' )`,
-                `INSERT INTO tagraph2 ( title , formulaid , seriesname ) VALUES ( '(234m-546m)' , (SELECT ID FROM formulas WHERE formulas.name = 'TA (234m-546m)') , 'TA (234m-546m)' )`,
-                `INSERT INTO tagraph2 ( title , formulaid , seriesname ) VALUES ( '(546m-1014m)' , (SELECT ID FROM formulas WHERE formulas.name = 'TA (546m-1014m)') , 'TA (546m-1014m)' )`,
-                `INSERT INTO tagraph2 ( title , formulaid , seriesname ) VALUES ( '(1014m-1950m)' , (SELECT ID FROM formulas WHERE formulas.name = 'TA (1014m-1950m)') , 'TA (1014m-1950m)' )`,
-                `INSERT INTO tagraph2 ( title , formulaid , seriesname ) VALUES ( '(1950m-3510m)' , (SELECT ID FROM formulas WHERE formulas.name = 'TA (1950m-3510m)') , 'TA (1950m-3510m)' )`,
-                `INSERT INTO tagraph2 ( title , formulaid , seriesname ) VALUES ( '(3510m-6630m)' , (SELECT ID FROM formulas WHERE formulas.name = 'TA (3510m-6630m)') , 'TA (3510m-6630m)' )`,
-                `INSERT INTO tagraph2 ( title , formulaid , seriesname ) VALUES ( '(6630m-14430m)' , (SELECT ID FROM formulas WHERE formulas.name = 'TA (6630m-14430m)') , 'TA (6630m-14430m)' )`,
-                `INSERT INTO tagraph2 ( title , formulaid , seriesname ) VALUES ( '(14430m-30030m)' , (SELECT ID FROM formulas WHERE formulas.name = 'TA (14430m-30030m)') , 'TA (14430m-30030m)' )`,
-                `INSERT INTO tagraph2 ( title , formulaid , seriesname ) VALUES ( '(30030m-53430m)' , (SELECT ID FROM formulas WHERE formulas.name = 'TA (30030m-53430m)') , 'TA (30030m-53430m)' )`,
-                `INSERT INTO tagraph2 ( title , formulaid , seriesname ) VALUES ( '(53430m-76830m)' , (SELECT ID FROM formulas WHERE formulas.name = 'TA (53430m-76830m)') , 'TA (53430m-76830m)' )`,
-                `INSERT INTO tagraph2 ( title , formulaid , seriesname ) VALUES ( '(>76830m)' , (SELECT ID FROM formulas WHERE formulas.name = 'TA (>76830m)') , 'TA (>76830m)' )`,
-
-            ], status:'none'
-        }, {
-            operation: 'Create default TA table', commands: [
-                `CREATE TABLE tatable2 ( ID INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, formulaid INTEGER , seriesname TEXT ,  FOREIGN KEY (formulaid) REFERENCES formulas(ID))`,
-                `INSERT INTO tatable2 ( title , formulaid , seriesname ) VALUES ( '(0-78m)' , (SELECT ID FROM formulas WHERE formulas.name = 'TA (0-78m)%') , 'TA (0-78m)%' )`,
-                `INSERT INTO tatable2 ( title , formulaid , seriesname ) VALUES ( '(78m-234m)' , (SELECT ID FROM formulas WHERE formulas.name = 'TA (78m-234m)%') , 'TA (78m-234m)%' )`,
-                `INSERT INTO tatable2 ( title , formulaid , seriesname ) VALUES ( '(234m-546m)' , (SELECT ID FROM formulas WHERE formulas.name = 'TA (234m-546m)%') , 'TA (234m-546m)%' )`,
-                `INSERT INTO tatable2 ( title , formulaid , seriesname ) VALUES ( '(546m-1014m)' , (SELECT ID FROM formulas WHERE formulas.name = 'TA (546m-1014m)%') , 'TA (546m-1014m)%' )`,
-                `INSERT INTO tatable2 ( title , formulaid , seriesname ) VALUES ( '(1014m-1950m)' , (SELECT ID FROM formulas WHERE formulas.name = 'TA (1014m-1950m)%') , 'TA (1014m-1950m)%' )`,
-                `INSERT INTO tatable2 ( title , formulaid , seriesname ) VALUES ( '(1950m-3510m)' , (SELECT ID FROM formulas WHERE formulas.name = 'TA (1950m-3510m)%') , 'TA (1950m-3510m)%' )`,
-                `INSERT INTO tatable2 ( title , formulaid , seriesname ) VALUES ( '(3510m-6630m)' , (SELECT ID FROM formulas WHERE formulas.name = 'TA (3510m-6630m)%') , 'TA (3510m-6630m)%' )`,
-                `INSERT INTO tatable2 ( title , formulaid , seriesname ) VALUES ( '(6630m-14430m)' , (SELECT ID FROM formulas WHERE formulas.name = 'TA (6630m-14430m)%') , 'TA (6630m-14430m)%' )`,
-                `INSERT INTO tatable2 ( title , formulaid , seriesname ) VALUES ( '(14430m-30030m)' , (SELECT ID FROM formulas WHERE formulas.name = 'TA (14430m-30030m)%') , 'TA (14430m-30030m)%' )`,
-                `INSERT INTO tatable2 ( title , formulaid , seriesname ) VALUES ( '(30030m-53430m)' , (SELECT ID FROM formulas WHERE formulas.name = 'TA (30030m-53430m)%') , 'TA (30030m-53430m)%' )`,
-                `INSERT INTO tatable2 ( title , formulaid , seriesname ) VALUES ( '(53430m-76830m)' , (SELECT ID FROM formulas WHERE formulas.name = 'TA (53430m-76830m)%') , 'TA (53430m-76830m)%' )`,
-                `INSERT INTO tatable2 ( title , formulaid , seriesname ) VALUES ( '(>76830m)' , (SELECT ID FROM formulas WHERE formulas.name = 'TA (>76830m)') , 'TA (>76830m)' )`,                
-
-            ], status:'none'
-        }
-    ]
-
-    const [ configuration , setConfiguration ] = React.useState(ztedigiconfigs)
+    
+    const [ configuration , setConfiguration ] = React.useState([])
     const [ inOperation , setInOperation ] = React.useState(false)
 
-    React.useEffect(()=>{
-        return () => {
-            if(!show){
-                if(appContext.project === 'huaweimaxis'){
-                    setConfiguration(huaweimaxisconfigs)
-                }else if(appContext.project === 'ztedigi'){
-                    setConfiguration(ztedigiconfigs)
-                }
-            }
-        }
-    },[show])
-
-    React.useEffect(()=>{
-        if(appContext.project === 'huaweimaxis'){
-            setConfiguration(huaweimaxisconfigs)
-        }else if(appContext.project === 'ztedigi'){
-            setConfiguration(ztedigiconfigs)
-        }
-    },[appContext.project])
     
+    
+    React.useEffect(()=>{
+        if(appContext.defaultSetting !== null && appContext.defaultSetting !== undefined){
+            setConfiguration(appContext.defaultSetting)
+        }
+        console.log(appContext.defaultSetting)
+    }, [appContext.defaultSetting])
+
     return <Modal show={show} onHide={onHide} backdrop="static" centered>
         <Modal.Header>Reset configuration</Modal.Header>
         <Modal.Body>
@@ -472,12 +211,17 @@ function Data(){
     const toastContext = React.useContext(ToastContext)
     const appContext = React.useContext(AppContext)
     const [ isQuerying , setIsQuerying ] = React.useState(false)
+    const [ lockOperation , setLockOperation ] = React.useState(false)
+
+    React.useEffect(() => {
+        setLockOperation(appContext.databaseBusy)
+    }, [ appContext.databaseBusy ])
 
     const queryCellCount = async (start , end , filter) => {
         setIsQuerying(true)
         console.log(appContext)
         let queries = appContext.main.filter(table => appContext.tables.includes(table)).map(table => {
-            return {table:table, command:`SELECT date(${appContext.objectDate.date}) as [date] , count(${appContext.objectDate.object}) as [cell_count] FROM ${table} WHERE date >= '${start}' and date <= '${moment(end).endOf('day').format("YYYY-MM-DD HH:mm:ss")}' ${!!filter ? `and object LIKE '${filter}%'`: ''}GROUP BY date(${appContext.objectDate.date}) ORDER BY ${appContext.objectDate.date}`}
+            return {table:table, command:`SELECT date(${appContext.objectDate.date}) as [date] , count(${appContext.objectDate.object}) as [cell_count] FROM ${table} WHERE date between '${start}' and  '${moment(end).endOf('day').format("YYYY-MM-DD HH:mm:ss")}' ${!!filter ? `and object LIKE '${filter}%'`: ''}GROUP BY date(${appContext.objectDate.date}) ORDER BY date(${appContext.objectDate.date})`}
     })
         let range = new Array(moment(end).diff(start, 'day')+1).fill('').map((entry, id) => moment(start).clone().add(id , 'day').format('YYYY-MM-DD'))
         let charts = {
@@ -700,11 +444,11 @@ function Data(){
                                         ...props
                                     }) => (
                                         <Menu {...props} style={{...props.style}} vertical pointing={true}>
-                                            <Menu.Item name="export-raw-data" disabled={appContext.main.filter(table => appContext.tables.includes(table)).length === 0} onClick={()=>{
+                                            <Menu.Item name="show-cell-list" disabled={appContext.main.filter(table => appContext.tables.includes(table)).length === 0 || lockOperation} onClick={()=>{
                                                 setShowCellList(true)
                                                 setShowMore(false)
                                             }}>List available cells</Menu.Item>
-                                            <Menu.Item name="export-raw-data"  disabled={appContext.main.filter(table => appContext.tables.includes(table)).length === 0} onClick={()=>{
+                                            <Menu.Item name="export-raw-data"  disabled={appContext.main.filter(table => appContext.tables.includes(table)).length === 0  || lockOperation} onClick={()=>{
                                                 if(filter !== ''){
                                                     appContext.promptTableSelection((table)=>{
                                                         exportRawData(startdate , enddate , filter , table)
@@ -717,7 +461,7 @@ function Data(){
                                                 db.send("whereismydb")
                                                 setShowMore(false)
                                             }}>Show database</Menu.Item>
-                                            <Menu.Item name="link-database" onClick={()=>{
+                                            <Menu.Item name="link-database" disabled={lockOperation} onClick={()=>{
                                                 let db = new Database()
                                                 db.linkDatabase().then((response)=>{
                                                     if(response.status === 'Ok'){
@@ -735,11 +479,11 @@ function Data(){
                                                 })
                                                 setShowMore(false)
                                             }}>Link database</Menu.Item>
-                                            <Menu.Item name="delete-duplicate" disabled={appContext.main.filter(table => appContext.tables.includes(table)).length === 0}  onClick={()=>{
+                                            <Menu.Item name="delete-duplicate" disabled={appContext.main.filter(table => appContext.tables.includes(table)).length === 0 || lockOperation}  onClick={()=>{
                                                 removeDuplicated(startdate, enddate)
                                                 setShowMore(false)
                                             }}>Delete duplicate</Menu.Item>
-                                            <Menu.Item name="delete-data"  disabled={appContext.main.filter(table => appContext.tables.includes(table)).length === 0} onClick={()=>{
+                                            <Menu.Item name="delete-data"  disabled={appContext.main.filter(table => appContext.tables.includes(table)).length === 0  || lockOperation} onClick={()=>{
                                                 setConfirm({
                                                     show: true , 
                                                     action: ()=>{console.log('delete');deleteData(startdate, enddate)}, 
@@ -747,13 +491,13 @@ function Data(){
                                                 })
                                                 setShowMore(false)
                                             }}>Delete data</Menu.Item>
-                                            <Menu.Item name="reset" onClick={()=>{
+                                            <Menu.Item name="reset" disabled={lockOperation} onClick={()=>{
                                                 setShowReset(true)
                                                 setShowMore(false)
                                             }}>
                                                 Reset configuration
                                             </Menu.Item>
-                                            {!isIndex && <Menu.Item name="optimize-database"  onClick={async ()=>{
+                                            {!isIndex && <Menu.Item name="optimize-database"   disabled={lockOperation}  onClick={async ()=>{
                                                 freezeContext.setFreeze(true, 'Creating index profile on database')
                                                 let db = new Database()
 
@@ -825,40 +569,8 @@ function Data(){
                 </Segment>}
             </Card.Body>
             <Card.Footer>
-                {/*!uploading && <Button primary onClick={()=>{
-                        let db = new Database();
-                        db.upload(
-                            'main', 
-                            ()=>{
-                                // on start uploading
-                                //setUploading(true);setProgress(0);setProgressText("Parsing Data")
-                                freezeContext.setFreeze(true , "Parsing data")
-                            }, 
-                            (param)=>{
-                                // on uploading
-                                //setProgressText("Uploading")
-                                //setProgress(Math.round(param.progress*100))
-                                freezeContext.setFreeze(true, "Uploading..." , param.progress*100)
-                            },
-                            ()=>{
-                                // on loading end
-                                //setUploading(false);setProgressText("");queryCellCount(startdate, enddate, filter)
-                                freezeContext.setFreeze(false)
-                                if(!appContext.tables.includes('main')){
-                                    appContext.updateTables()
-                                }
-                            },
-                            ()=>{
-                                // on uploading error
-                                //setUploading(false);setProgressText("")
-                                freezeContext.setFreeze(false)
-                                toastContext.setError('Error occured when uploading stats')
-                            }
-                        )
-                    }}>
-                        Select file to upload
-                </Button>*/}
-                {appContext.main.map((table,tableId) => <Button key={tableId} content='Upload' label={{basic:true,content:table}} primary onClick={()=>{
+                
+                {appContext.main.map((table,tableId) => <Button key={tableId} content='Upload' disabled={lockOperation} label={{basic:true,content:table}} primary onClick={()=>{
                     let db = new Database();
                     db.upload(
                         table,
@@ -874,14 +586,21 @@ function Data(){
                             //setProgress(Math.round(param.progress*100))
                             freezeContext.setFreeze(true, "Uploading..." , param.progress*100)
                         },
-                        ()=>{
+                        async ()=>{
                             // on loading end
-                            //setUploading(false);setProgressText("");queryCellCount(startdate, enddate, filter)
-                            freezeContext.setFreeze(false)
+                            // setUploading(false);setProgressText("");queryCellCount(startdate, enddate, filter)
+                            
+
+                            // upload to online database
                             if(!appContext.tables.includes(table)){
                                 appContext.updateTables()
                             }
+
                             queryCellCount(startdate,enddate,filter)
+                            // update to online database
+                            
+
+                            freezeContext.setFreeze(false)
                         },
                         ()=>{
                             // on uploading error

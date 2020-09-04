@@ -52,20 +52,19 @@ function AntennaSwap(props){
             <Nav.Item>
                 <Nav.Link as={Link} to={`${match.url}/antennaswapreport`} eventKey="antennaswapreport">Antenna Swap Report</Nav.Link>
             </Nav.Item>
-            <Nav.Item>
+            {/*<Nav.Item>
                 <Nav.Link as={Link} to={`${match.url}/kpichart`} eventKey="kpichart">KPI Chart</Nav.Link>
             </Nav.Item>
-            {/*<Nav.Item>
+            <Nav.Item>
                 <Nav.Link as={Link} to={`${match.url}/tachart`} eventKey="tachart">TA Chart</Nav.Link>
             </Nav.Item>*/}
-            
         </Nav>
 
         <Switch>
-            <Route path={`${match.url}/kpichart`}>
+            {/*<Route path={`${match.url}/kpichart`}>
                 <KPIChart />
             </Route>
-            {/*<Route path={`${match.url}/tachart`}>
+            <Route path={`${match.url}/tachart`}>
                 <TaChart />
             </Route>*/}
             <Route path={`${match.url}/antennaswapreport`}>

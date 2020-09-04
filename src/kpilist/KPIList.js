@@ -14,7 +14,10 @@ function EditFormula(props){
     const [ counters , setCounters ] = React.useState([])
     const [ formulaCorrect , setFormulaCorrect ] = React.useState(false);
     const [ nameCorrect , setNameCorrect ] = React.useState('Name is empty')
+    
     const appContext = React.useContext(AppContext)
+
+    
 
     const verifyFomula = (_formula, _columns) => {
         let removeAgg = _formula; 
@@ -154,11 +157,17 @@ function KPIList(props){
         names: []
     })
     const appContext = React.useContext(AppContext)
+    const [ lockOperation , setLockOperation ] = React.useState(false)
 
     const itemPerPage = 10
+
     React.useEffect(()=>{
         setTitle(title)
     }, [title])
+
+    React.useEffect(() => {
+        setLockOperation(appContext.databaseBusy)
+    }, [appContext.databaseBusy])
 
     const loadColumns = async () => {
         let queries = appContext.main.filter(table => appContext.tables.includes(table)).map(table => {
@@ -206,7 +215,7 @@ function KPIList(props){
             
             <div style={{flexGrow:1}}></div>
             <div style={{marginLeft: '4px'}}>
-                <Button basic primary content="Create" icon="add" labelPosition="right" onClick={()=>{
+                <Button basic primary disabled={lockOperation} content="Create" icon="add" labelPosition="right" onClick={()=>{
                     setEditing({
                         show: true, 
                         name: '',
