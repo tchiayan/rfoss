@@ -58,7 +58,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "postinstall": "electron-builder install-app-deps",
+    "electron-install-deps": "electron-builder install-app-deps",
     "build-upload-python": "pyinstaller python\\upload.py --onefile --distpath=public",
     "build-excel-python": "pyinstaller python\\excel.py --onefile --distpath=public",
     "pack": "electron-builder --dir",
