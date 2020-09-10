@@ -14,101 +14,104 @@ import "firebase/database"
  * Listen to device online/offline status.
  * Subscribe to realtime configuration upon online and unsubscribe the configuration once app goes offline.
  * Update the local storage variable once if any changes
- * @param {Function} onlineCallback - Callback function when application goes online
- * @param {Function} offlineCallback - Callback function when application goes offline
  * 
- * @returns {void}
+ * @returns {Promise<Object|boolean>} 
  */
-const updateRegisterListenWhenOnline = ( onlineCallback , callbackIfOffline ) => {
+const updateRegisterListenWhenOnline = (  ) => {
     
     let appVersion = process.env.REACT_APP_VERSION.replace(/\./g, '`')
     let db = new Database()
 
-    
-    db.getComputerID().then((id)=>{
-        let connectedRef = firebase.database().ref(".info/connected");
-        console.log('Listen to online/offline')
-        let licenseSubscription = null
-        let configSubscription = null
-        connectedRef.on("value", (snapshot)=>{
-            if (snapshot.val() === true){
-                console.log('Application goes online')
-                licenseSubscription = firebase.database().ref(`rfoss/license/${id}`).on('value' , async (snapshot)=>{
-                    if(!!snapshot){
-                        if(snapshot.val() !== null){
-                            const { email , project , expired } = snapshot.val()
-                            window.localStorage.setItem("expired",expired)
-                            window.localStorage.setItem("project",project)
-                            if(moment(expired, "YYYY-MM-DD").diff(moment(),'days') >= 0){
-                                window.localStorage.setItem("isExpired", false)
-                            }else{
-                                window.localStorage.setItem("isExpired", true)
-                            }
-    
-                            let _setting = {}
-                            if(!!project){
-                                console.log(`Get lastest project setting [${project}] from online [rfoss/version/${appVersion}/projectSetting/${project}]`)
-                                _setting = await firebase.database().ref(`rfoss/version/${appVersion}/projectSetting/${project}`).once('value').then((snapshot)=>{
-                                    if(snapshot.val()){
-                                        let setting = {
-                                            main: undefined,
-                                            uploadingFormat: undefined, 
-                                            useAliasColumn: undefined, 
-                                            date: undefined, 
-                                            object: undefined, 
-                                            alias: undefined, 
-                                            sitelevel: undefined, 
-                                            celllevel: undefined, 
-                                            sectorlevel: undefined,
-                                            projectconfig: undefined,
-                                            defaultsetting: undefined,
-                                        }
-                                        Object.assign(setting , snapshot.val())
-    
-                                        Object.entries(setting).forEach(([field , value]) => {
-                                            if(typeof value === 'object'){
-                                                window.localStorage.setItem(field , JSON.stringify(value))
-                                            }else if(typeof value === 'undefined'){
-                                                window.localStorage.removeItem(field)
-                                            }else{
-                                                window.localStorage.setItem(field , value)
+    return new Promise((resolve) => {
+        db.getComputerID().then((id)=>{
+            let connectedRef = firebase.database().ref(".info/connected");
+            console.log('Listen to online/offline')
+            let licenseSubscription = null
+            let configSubscription = null
+            connectedRef.on("value", (snapshot)=>{
+                if (snapshot.val() === true){
+                    console.log('Application goes online')
+                    licenseSubscription = firebase.database().ref(`rfoss/license/${id}`).on('value' , async (snapshot)=>{
+                        if(!!snapshot){
+                            if(snapshot.val() !== null){
+                                const { email , project , expired , serverUpload } = snapshot.val()
+                                window.localStorage.setItem("expired",expired)
+                                window.localStorage.setItem("serverupload", serverUpload)
+                                window.localStorage.setItem("project",project)
+                                if(moment(expired, "YYYY-MM-DD").diff(moment(),'days') >= 0){
+                                    window.localStorage.setItem("isExpired", false)
+                                }else{
+                                    window.localStorage.setItem("isExpired", true)
+                                }
+        
+                                let _setting = {}
+                                if(!!project){
+                                    console.log(`Get lastest project setting [${project}] from online [rfoss/version/${appVersion}/projectSetting/${project}]`)
+                                    _setting = await firebase.database().ref(`rfoss/version/${appVersion}/projectSetting/${project}`).once('value').then((snapshot)=>{
+                                        if(snapshot.val()){
+                                            let setting = {
+                                                main: undefined,
+                                                uploadingFormat: undefined, 
+                                                useAliasColumn: undefined, 
+                                                date: undefined, 
+                                                object: undefined, 
+                                                alias: undefined, 
+                                                sitelevel: undefined, 
+                                                celllevel: undefined, 
+                                                sectorlevel: undefined,
+                                                projectconfig: undefined,
+                                                defaultsetting: undefined,
+                                                databaseserver: undefined
                                             }
-                                        })
-    
-                                        return setting
-                                    }
+                                            Object.assign(setting , snapshot.val())
+        
+                                            Object.entries(setting).forEach(([field , value]) => {
+                                                if(typeof value === 'object'){
+                                                    window.localStorage.setItem(field , JSON.stringify(value))
+                                                }else if(typeof value === 'undefined'){
+                                                    window.localStorage.removeItem(field)
+                                                }else{
+                                                    window.localStorage.setItem(field , value)
+                                                }
+                                            })
+        
+                                            return setting
+                                        }
+                                    })
+                                }
+                                resolve({
+                                    ..._setting,
+                                    project: project,
+                                    email: email, 
+                                    expired: expired,
+                                    serverupload: serverUpload
                                 })
+                            }else{
+                                window.localStorage.removeItem("expired")
+                                window.localStorage.removeItem("project")
+                                window.localStorage.removeItem("isExpired")
                             }
-                            onlineCallback({
-                                ..._setting,
-                                project: project,
-                                email: email, 
-                                expired: expired
-    
-                            })
-                        }else{
-                            window.localStorage.removeItem("expired")
-                            window.localStorage.removeItem("project")
-                            window.localStorage.removeItem("isExpired")
                         }
+                        
+                    })
+                }else{
+                    // unsubscribe any online change event
+                    if(licenseSubscription !== null){
+                        licenseSubscription()
                     }
-                    
-                })
-            }else{
-                // unsubscribe any online change event
-                if(licenseSubscription !== null){
-                    licenseSubscription()
+    
+                    if(configSubscription !== null){
+                        configSubscription()
+                    }
+    
+                    console.log(`Application offline, get from offline`)
+                    //callbackIfOffline()
+                    resolve(false)
                 }
-
-                if(configSubscription !== null){
-                    configSubscription()
-                }
-
-                console.log(`Application offline, get from offline`)
-                callbackIfOffline()
-            }
+            })
         })
-    })  
+    })
+      
 }
 
 function RegisterLogin(props){

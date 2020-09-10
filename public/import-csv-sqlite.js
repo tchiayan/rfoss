@@ -5,7 +5,7 @@ const EventEmitter = require('events').EventEmitter;
 const moment = require('moment')
 
 class CsvSqlLite extends EventEmitter{
-    constructor(dbPath , socket = false){
+    constructor(dbPath , socket = ''){
         super()
         this.db = new sqlite3.Database(dbPath , (err) => {
             if(err){
@@ -17,8 +17,8 @@ class CsvSqlLite extends EventEmitter{
             }
         })
 
-        if(socket){
-            this.socket = require('socket.io-client')('http://localhost:8080')
+        if(socket !== ''){
+            this.socket = require('socket.io-client')(socket)
         }
     }
     
@@ -37,7 +37,7 @@ class CsvSqlLite extends EventEmitter{
                 return parseFloat(val.match(/(?<percentage>\d{1,}\.?\d*)%/,'i').groups.percentage)
             }else if(!isNaN(val)){
                 return parseFloat(val)
-            }else if(val.match(/^(\d{3},){0,}\d{3}(\.\d{1,})?$/)){
+            }else if(val.match(/^\d{1,}(,\d{3}){1,}(\.\d{1,})?$/)){
                 return parseFloat(val.replace(/,/g, ""))
             }else if(moment(val, "YYYY-MM-DD HH:mm:ss", true).isValid()){
                 return `'${val}'`
@@ -229,6 +229,9 @@ class CsvSqlLite extends EventEmitter{
                             uploadBatchCount++;
                             this.emit("progress", {progress:parseFloat((totalUpload/totalRows).toFixed(2)), success: success , error: error , total:totalUpload})
                             csvStream.resume()
+                            if(this.socket){
+                                this.socket.disconnect()
+                            }
                         })
                         this.db.exec(`INSERT INTO ${tablename} ( ${uploadKey.join(" , ")}) VALUES ${uploadInsert.join(" , ")}`, (err)=>{
                             if(!!err){

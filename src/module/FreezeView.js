@@ -9,13 +9,16 @@ export function FreezeModal(props){
     const { hide , message , value } = props;
 
     return <div style={{position:'absolute',height:'100vh',width:'100%', zIndex: 9999, display:hide?'flex':'none',backdropFilter:'blur(10px)',alignItems:'center',justifyContent:'center', flexDirection:'column'}}>
-        <div style={{display:'flex',alignItems:'center'}}>
-            {(value === undefined || value === null) && <Loader active inline/>}
-            <div style={{padding:'0px 10px'}}>{!!message ? message : 'Loading...' }</div>
+        <div style={{background: 'white', padding: '10px', border: '1px solid #bdbdbd', display: 'flex', flexDirection: 'column', alignItems:'center', justifyContent:'center'}}>
+            <div style={{display:'flex',alignItems:'center'}}>
+                {(value === undefined || value === null) && <Loader active inline/>}
+                <div style={{padding:'0px 10px'}}>{!!message ? message : 'Loading...' }</div>
+            </div>
+            {(!(value === undefined || value === null)) && <div style={{width:'50vw', marginTop: '10px'}}>
+                <LinearProgress  variant="determinate" value={value} />
+            </div>}
         </div>
-        {(!(value === undefined || value === null)) && <div style={{width:'50%', marginTop: '10px'}}>
-            <LinearProgress  variant="determinate" value={value} />
-        </div>}
+        
         
     </div>
 }

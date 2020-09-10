@@ -186,7 +186,7 @@ function ConfirmAction(props){
             <span>{text}</span>
         </Modal.Body>
         <Modal.Footer>
-            <Button primary onClick={()=>action()}>Proceed</Button>
+            <Button primary onClick={()=>{action();onHide()}}>Proceed</Button>
             <Button secondary onClick={()=>onHide()}>Cancel</Button>
         </Modal.Footer>
     </Modal>
@@ -245,7 +245,6 @@ function Data(){
         for(let i=0,q; q=queries[i];i++){
             console.log(q.command)
             let query = await new Database().query(q.command)
-            console.log(query)
             if(query.status === 'Ok'){
                 let result = query.result.reduce((obj , entry) => ({...obj , [entry.date]:entry.cell_count}) , {})
                 charts.series.push({
@@ -424,7 +423,7 @@ function Data(){
                             <Form.Input className="semantic-react-form-input" type="date" required label="Start Date" max={enddate} value={startdate} onChange={(e,{value})=>setStartdate(value)}/>
                             <Form.Input className="semantic-react-form-input" type="date" required label="End Date" min={startdate} value={enddate} onChange={(e,{value})=>setEnddate(value)}/>
                             <Form.Input className="semantic-react-form-input" type="text" label="Filter cells" value={filter} onChange={(e,{value})=>setFilter(value)} />
-                            <Button  onClick={()=>{
+                            <Button disabled={appContext.main.filter(table => appContext.tables.includes(table)).length === 0} onClick={()=>{
                                 setChartProps(null)
                                 queryCellCount(startdate , enddate, filter)
                             }}>Query</Button>
@@ -486,7 +485,7 @@ function Data(){
                                             <Menu.Item name="delete-data"  disabled={appContext.main.filter(table => appContext.tables.includes(table)).length === 0  || lockOperation} onClick={()=>{
                                                 setConfirm({
                                                     show: true , 
-                                                    action: ()=>{console.log('delete');deleteData(startdate, enddate)}, 
+                                                    action: ()=>{deleteData(startdate, enddate)}, 
                                                     text: `Delete data from ${startdate} to ${enddate}`
                                                 })
                                                 setShowMore(false)
@@ -564,13 +563,95 @@ function Data(){
                 {appContext.main.filter(table => appContext.tables.includes(table)).length > 0 && isQuerying && chartProps === null && <div style={{display:'flex', justifyContent: 'center', alignItems: 'center',height:'50vh'}}><Loader active/></div>}
                 {appContext.main.filter(table => appContext.tables.includes(table)).length === 0 && <Segment placeholder style={{height:'52vh'}}>
                     <Header icon>
-                        No data
+                        Missing configuration.
                     </Header>
+                    <Button onClick={async () => {
+                        freezeContext.setFreeze(true , "Loading...")
+
+                        let db = new Database()
+                        if(appContext.defaultSetting.length > 0){
+                            for(let i = 0 ; i < appContext.defaultSetting.length ; i++){
+                                const { commands, operation } = appContext.defaultSetting[i]
+                                let failCount = 0 
+                                let successCount = 0
+                                for(let j = 0 ; j < commands.length ; j++){
+                                    freezeContext.setFreeze(true , `${operation} [${j}/${commands.length}]`)
+                                    await db.update(commands[j]).then((response)=>{
+                                        freezeContext.setFreeze(true , `${operation} [${j+1}/${commands.length}]`)
+                                        if(response.status === 'Ok'){
+                                            successCount++
+                                        }else{
+                                            console.log(`Fail to run this commmand : ${commands[j]}`)
+                                            failCount++
+                                        }
+                                    })
+                                }
+                            }
+                        }
+
+                        
+                        if(appContext.uploadingOptions){
+                            let tablesConfig = Object.entries(appContext.uploadingOptions.alias)
+                            for(let i = 0 ; i < tablesConfig.length ; i ++){
+                                const [ table , tableConfig ] = tablesConfig[i]
+                                freezeContext.setFreeze(true, `Creating data tables: ${table}`)
+                                let command = `CREATE TABLE ${table} (  ${["ID INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL" , ...tableConfig.map(col => `${col.name} ${col.format}`)].join(" , ")} ) `
+                                await db.update(command).then((response) => {
+                                    if(response.status === 'Ok'){
+
+                                    }else{
+
+                                    }
+                                })
+                            }
+                        }
+
+                        
+
+                        // Optimize database
+                        freezeContext.setFreeze(true, 'Creating index profile on database')
+                        let tables = await appContext.updateTables()
+                        let allTable = tables.filter(table => appContext.main.includes(table))
+                        let indexedTable = await db.query(`SELECT type , name , tbl_name, sql FROM sqlite_master WHERE type ='index' and ( ${tables.filter(table => appContext.main.includes(table)).map(table => `tbl_name = '${table}'`).join(" or ")} ) and name LIKE 'timeobject_%' `).then(response => {
+                            if(response.status === 'Ok'){
+                                return response.result.map(row => row.tbl_name)
+                            }else{
+                                return []
+                            }
+                        }).catch((error) => {
+                            console.log('error while quering indexed table')
+                            return []
+                        })
+
+                        let tableToIndex = allTable.filter(table => !indexedTable.includes(table)) 
+                        let error = false
+                        for(let i = 0 ; i < tableToIndex.length ; i++){
+                            freezeContext.setFreeze(true, `Creating index profile on database ${tableToIndex[i]}`)
+                            console.log(`CREATE INDEX timeobject_${tableToIndex[i]} ON ${tableToIndex[i]} (${appContext.objectDate.date} COLLATE BINARY, ${appContext.objectDate.object} COLLATE NOCASE)`)
+                            await db.update(`CREATE INDEX timeobject_${tableToIndex[i]} ON ${tableToIndex[i]} (${appContext.objectDate.date} COLLATE BINARY, ${appContext.objectDate.object} COLLATE NOCASE)`).then((response) => {
+                                if(response.status === 'Ok'){
+                                    return 
+                                }else{
+                                    error = true    
+                                    return
+                                }
+                            })
+                        }
+                        
+                        if(!error){
+                            setIsIndex(true)
+                        }else{
+                            toastContext.setError("Error while optimizing database")
+                        }
+
+                        freezeContext.setFreeze(false)
+
+                    }}>Setup now</Button>
                 </Segment>}
             </Card.Body>
             <Card.Footer>
                 
-                {appContext.main.map((table,tableId) => <Button key={tableId} content='Upload' disabled={lockOperation} label={{basic:true,content:table}} primary onClick={()=>{
+                {appContext.main.map((table,tableId) => <Button key={tableId} content='Upload' disabled={lockOperation || !appContext.tables.includes(table)} label={{basic:true,content:table}} primary onClick={()=>{
                     let db = new Database();
                     db.upload(
                         table,
@@ -578,6 +659,7 @@ function Data(){
                         ()=>{
                             // on start uploading
                             //setUploading(true);setProgress(0);setProgressText("Parsing Data")
+                            appContext.cancelSync()
                             freezeContext.setFreeze(true , "Parsing data")
                         }, 
                         (param)=>{
@@ -588,7 +670,6 @@ function Data(){
                         },
                         async ()=>{
                             // on loading end
-                            // setUploading(false);setProgressText("");queryCellCount(startdate, enddate, filter)
                             
 
                             // upload to online database
@@ -599,7 +680,7 @@ function Data(){
                             queryCellCount(startdate,enddate,filter)
                             // update to online database
                             
-
+                            appContext.startSync(900000)
                             freezeContext.setFreeze(false)
                         },
                         ()=>{
@@ -608,7 +689,8 @@ function Data(){
                             freezeContext.setFreeze(false)
                             toastContext.setError('Error occured when uploading stats')
                         }, 
-                        appContext.uploadingOptions
+                        appContext.uploadingOptions,
+                        appContext.uploadOnlineOnSuccess ? appContext.databaseServer : ''
                     )
                 }}/>)}
             </Card.Footer>

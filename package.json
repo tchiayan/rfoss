@@ -18,14 +18,12 @@
     "@material-ui/icons": "^4.5.1",
     "@material-ui/lab": "^4.0.0-alpha.55",
     "bootstrap": "^4.3.1",
-    "cors": "^2.8.5",
     "csv-parser": "^2.3.3",
     "electron-is-dev": "^1.1.0",
     "electron-log": "^4.2.4",
     "electron-updater": "^4.2.0",
     "exceljs": "^3.4.0",
     "expr-eval": "^2.0.2",
-    "express": "^4.17.1",
     "firebase": "^7.15.1",
     "firebase-admin": "^9.1.1",
     "highcharts": "^7.2.1",
@@ -34,7 +32,6 @@
     "moment": "^2.27.0",
     "nan": "^2.14.0",
     "node-machine-id": "^1.1.12",
-    "nodemon": "^2.0.4",
     "react": "^16.12.0",
     "react-bootstrap": "^1.0.0-beta.16",
     "react-dom": "^16.12.0",
@@ -64,8 +61,8 @@
     "pack": "electron-builder --dir",
     "dist": "electron-builder --publish=always",
     "prepublish": "react-scripts build && pyinstaller python\\upload.py --onefile --distpath=public && pyinstaller python\\excel.py --onefile --distpath=public",
-    "publish": "electron-builder --publish=always",
-    "start-digiserver": "nodemon ./server/index.js"
+    "publish": "electron-builder --publish=always", 
+    "republish": "electron-builder --publish=always"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -111,8 +108,11 @@
     "win": {
       "publish": [
         {
-          "provider": "generic",
-          "url": "https://storage.googleapis.com/rfoss/"
+          "provider": "bintray",
+          "package": "rfoss", 
+          "repo":"steadcom",
+          "owner": "tchiayan92",
+          "token": "9540383d7293194ddbcbfa55835796c6234b5d04"
         }
       ],
       "icon": "build/icon.png"

@@ -64,7 +64,7 @@ function createWindow() {
     mainWindow.removeMenu()
     mainWindow.setMenu(null)
 
-    mainWindow.webContents.openDevTools({mode:'bottom'})
+    //mainWindow.webContents.openDevTools({mode:'bottom'})
     autoUpdater.autoDownload = false
     //autoUpdater.setFeedURL('https://storage.googleapis.com/rfoss/')
     autoUpdater.checkForUpdatesAndNotify();
@@ -159,11 +159,14 @@ ipcMain.on(`uploadFileStatus_csv`, (event,arg) => {
             let filePaths = dialogResult.filePaths;
             //let rowNum = 1
             let headerRow = arg.options.uploadingHeader
-            let headerCol = arg.options.alias[arg.tablename]
+            let headerCol = arg.options.alias[arg.tablename].reduce((obj , col) => {
+                obj[col['name']] = col['field']
+                return obj
+            },{})
             let tablename = arg.tablename
-
-            let _csvImporter = new csvImporter(defaultDbPath , true)
-
+            let uploadServerAddress = arg.uploadServerAddress
+            let _csvImporter = new csvImporter(defaultDbPath , uploadServerAddress)
+            
             _csvImporter.on("ready", () =>{
                 event.sender.send('uploadFileStatus_csv_'+arg.session+'_start')
                 _csvImporter.uploadCsv(filePaths[0], headerRow , headerCol, tablename)

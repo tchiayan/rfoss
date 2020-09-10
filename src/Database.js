@@ -227,9 +227,9 @@ class Database {
         })
     }
 
-    upload(tablename, uploadingFormat ,  onUploadingStart, onUploadingCallback , onFinishCallback, onUploadError, options){
+    upload(tablename, uploadingFormat ,  onUploadingStart, onUploadingCallback , onFinishCallback, onUploadError, options , uploadServerAddress){
         const session = Math.random().toString(16).slice(2)
-        this.ipcRenderer.send(`uploadFileStatus_${uploadingFormat}`,{session: session, tablename:tablename, options:options})
+        this.ipcRenderer.send(`uploadFileStatus_${uploadingFormat}`,{session: session, tablename:tablename, options:options , uploadServerAddress: uploadServerAddress})
 
         const listener = (event, arg)=>{
             //console.log(arg)
