@@ -1,6 +1,6 @@
 {
   "name": "rf-oss-util",
-  "version": "2.0.0",
+  "version": "2.0.1-0",
   "private": true,
   "main": "public/electron.js",
   "author": {
@@ -61,7 +61,7 @@
     "pack": "electron-builder --dir",
     "dist": "electron-builder --publish=always",
     "prepublish": "react-scripts build && pyinstaller python\\upload.py --onefile --distpath=public && pyinstaller python\\excel.py --onefile --distpath=public",
-    "publish": "electron-builder --publish=always", 
+    "publish": "electron-builder --publish=always",
     "republish": "electron-builder --publish=always"
   },
   "eslintConfig": {
@@ -108,11 +108,10 @@
     "win": {
       "publish": [
         {
-          "provider": "bintray",
-          "package": "rfoss", 
-          "repo":"steadcom",
-          "owner": "tchiayan92",
-          "token": "9540383d7293194ddbcbfa55835796c6234b5d04"
+          "provider": "github",
+          "repo": "rfoss",
+          "owner": "tchiayan",
+          "releaseTyp":"prerelease"
         }
       ],
       "icon": "build/icon.png"

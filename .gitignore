@@ -29,6 +29,9 @@
 *.zip
 config.js
 *.spec
+steadcom-project-management-export.json
+rock-sublime-819-export.json
+src/credential.js
 
 npm-debug.log*
 yarn-debug.log*
